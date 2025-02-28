@@ -1389,6 +1389,7 @@ export class Canvas extends SelectableCanvas implements CanvasOptions {
   protected handleMultiSelection(e: TPointerEvent, target?: FabricObject) {
     const activeObject = this._activeObject;
     const isAS = isActiveSelection(activeObject);
+    console.log('activeObject', activeObject, isAS);
     if (
       // check if an active object exists on canvas and if the user is pressing the `selectionKey` while canvas supports multi selection.
       !!activeObject &&

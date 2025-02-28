@@ -31,12 +31,6 @@ export class OlpShape extends Path {
       ...options,
       scaleX,
       scaleY,
-      cornerColor: 'white', // 控制点颜色
-      cornerStyle: 'circle', // 圆形控制点
-      cornerSize: 10, // 控制点大小
-      cornerStrokeColor: 'black', // 控制点边框颜色
-      cornerStrokeWidth: 2, // 控制点边框宽度
-      transparentCorners: false, // 使控制点不透明
     });
 
     const padding = this.shapePadding;

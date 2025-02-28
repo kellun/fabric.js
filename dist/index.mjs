@@ -5175,12 +5175,12 @@ const interactiveObjectDefaultValues = {
   lockSkewingX: false,
   lockSkewingY: false,
   lockScalingFlip: false,
-  cornerSize: 13,
+  cornerSize: 10,
   touchCornerSize: 24,
-  transparentCorners: true,
-  cornerColor: 'rgb(178,204,255)',
-  cornerStrokeColor: '',
-  cornerStyle: 'rect',
+  transparentCorners: false,
+  cornerColor: 'rgb(255,255,255)',
+  cornerStrokeColor: 'black',
+  cornerStyle: 'circle',
   cornerDashArray: null,
   hasControls: true,
   borderColor: 'rgb(178,204,255)',
@@ -15543,6 +15543,7 @@ class Canvas extends SelectableCanvas {
   handleMultiSelection(e, target) {
     const activeObject = this._activeObject;
     const isAS = isActiveSelection(activeObject);
+    console.log('activeObject', activeObject, isAS);
     if (
     // check if an active object exists on canvas and if the user is pressing the `selectionKey` while canvas supports multi selection.
     !!activeObject && this._isSelectionKeyPressed(e) && this.selection &&
@@ -24829,18 +24830,7 @@ class OlpShape extends Path {
     }
     super(pathData, _objectSpread2(_objectSpread2({}, options), {}, {
       scaleX,
-      scaleY,
-      cornerColor: 'white',
-      // 控制点颜色
-      cornerStyle: 'circle',
-      // 圆形控制点
-      cornerSize: 10,
-      // 控制点大小
-      cornerStrokeColor: 'black',
-      // 控制点边框颜色
-      cornerStrokeWidth: 2,
-      // 控制点边框宽度
-      transparentCorners: false // 使控制点不透明
+      scaleY
     }));
     _defineProperty(this, "textbox", void 0);
     _defineProperty(this, "shapePadding", [0, 30, 0, 30]);
