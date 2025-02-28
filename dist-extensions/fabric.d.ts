@@ -104,6 +104,7 @@ export { FabricImage,
  */
 FabricImage as Image, } from './src/shapes/Image';
 export type { ImageSource, SerializedImageProps, ImageProps, } from './src/shapes/Image';
+export { OlpShape } from './src/shapes/Elements/OlpShape';
 export { createCollectionMixin } from './src/Collection';
 export * as util from './src/util';
 export { loadSVGFromString } from './src/parser/loadSVGFromString';

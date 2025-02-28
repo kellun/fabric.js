@@ -51,6 +51,7 @@ import type { CanvasOptions } from './CanvasOptions';
 import { canvasDefaults } from './CanvasOptions';
 import { Intersection } from '../Intersection';
 import { isActiveSelection } from '../util/typeAssertions';
+import { OlpShape } from '../../fabric';
 
 /**
  * Canvas class
@@ -361,8 +362,8 @@ export class SelectableCanvas<EventSpec extends CanvasEvents = CanvasEvents>
     const activeObject = this._activeObject;
     return !this.preserveObjectStacking && activeObject
       ? this._objects
-          .filter((object) => !object.group && object !== activeObject)
-          .concat(activeObject)
+        .filter((object) => !object.group && object !== activeObject)
+        .concat(activeObject)
       : this._objects;
   }
 
@@ -594,11 +595,11 @@ export class SelectableCanvas<EventSpec extends CanvasEvents = CanvasEvents>
   ): void {
     const pointer = target.group
       ? // transform pointer to target's containing coordinate plane
-        sendPointToPlane(
-          this.getScenePoint(e),
-          undefined,
-          target.group.calcTransformMatrix(),
-        )
+      sendPointToPlane(
+        this.getScenePoint(e),
+        undefined,
+        target.group.calcTransformMatrix(),
+      )
       : this.getScenePoint(e);
     const { key: corner = '', control } = target.getActiveControl() || {},
       actionHandler =
@@ -769,6 +770,30 @@ export class SelectableCanvas<EventSpec extends CanvasEvents = CanvasEvents>
   private _pointIsInObjectSelectionArea(obj: FabricObject, point: Point) {
     // getCoords will already take care of group de-nesting
     let coords = obj.getCoords();
+    const isOlpShape = obj instanceof OlpShape;
+    if (isOlpShape) {
+      // 通过textboxCoords计算obj.textbox相对于canvas的坐标
+      const textboxCoords = obj.textbox.getCoords();
+
+      // 获取obj的变换矩阵
+      const objMatrix = obj.calcTransformMatrix();
+      // 获取obj的父级变换矩阵（如果有的话）
+      const parentMatrix = obj.group ? obj.group.calcTransformMatrix() : null;
+
+      // 将textboxCoords从obj的局部坐标系转换到canvas的全局坐标系
+      const canvasTextboxCoords = textboxCoords.map(tbPoint => {
+        // 将textbox的坐标点转换为canvas的坐标点
+        let point = new Point(tbPoint.x, tbPoint.y);
+        // 应用obj的变换矩阵
+        point = point.transform(objMatrix);
+        // 如果有父级变换矩阵，继续应用
+        if (parentMatrix) {
+          point = point.transform(parentMatrix);
+        }
+        return point;
+      });
+      coords = canvasTextboxCoords;
+    }
     const viewportZoom = this.getZoom();
     const padding = obj.padding / viewportZoom;
     if (padding) {
@@ -985,9 +1010,9 @@ export class SelectableCanvas<EventSpec extends CanvasEvents = CanvasEvents>
       boundsWidth === 0 || boundsHeight === 0
         ? new Point(1, 1)
         : new Point(
-            upperCanvasEl.width / boundsWidth,
-            upperCanvasEl.height / boundsHeight,
-          );
+          upperCanvasEl.width / boundsWidth,
+          upperCanvasEl.height / boundsHeight,
+        );
 
     return pointer.multiply(cssScale);
   }

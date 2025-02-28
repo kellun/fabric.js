@@ -33,8 +33,8 @@ function _objectWithoutProperties(e, t) {
     r,
     i = _objectWithoutPropertiesLoose(e, t);
   if (Object.getOwnPropertySymbols) {
-    var n = Object.getOwnPropertySymbols(e);
-    for (r = 0; r < n.length; r++) o = n[r], t.indexOf(o) >= 0 || {}.propertyIsEnumerable.call(e, o) && (i[o] = e[o]);
+    var s = Object.getOwnPropertySymbols(e);
+    for (r = 0; r < s.length; r++) o = s[r], t.includes(o) || {}.propertyIsEnumerable.call(e, o) && (i[o] = e[o]);
   }
   return i;
 }
@@ -42,7 +42,7 @@ function _objectWithoutPropertiesLoose(r, e) {
   if (null == r) return {};
   var t = {};
   for (var n in r) if ({}.hasOwnProperty.call(r, n)) {
-    if (e.indexOf(n) >= 0) continue;
+    if (e.includes(n)) continue;
     t[n] = r[n];
   }
   return t;
@@ -8967,7 +8967,7 @@ function skewObject(axis, _ref, pointer) {
       scaleY: 1
     }).y;
   const shearing = 2 * offset * skewingSide /
-  // we max out fractions to safeguard from asymptotic behavior
+   // we max out fractions to safeguard from asymptotic behavior
   Math.max(b, 1) +
   // add starting state
   shearingStart;
@@ -13774,6 +13774,30 @@ class SelectableCanvas extends StaticCanvas {
   _pointIsInObjectSelectionArea(obj, point) {
     // getCoords will already take care of group de-nesting
     let coords = obj.getCoords();
+    const isOlpShape = obj instanceof OlpShape;
+    if (isOlpShape) {
+      // 通过textboxCoords计算obj.textbox相对于canvas的坐标
+      const textboxCoords = obj.textbox.getCoords();
+
+      // 获取obj的变换矩阵
+      const objMatrix = obj.calcTransformMatrix();
+      // 获取obj的父级变换矩阵（如果有的话）
+      const parentMatrix = obj.group ? obj.group.calcTransformMatrix() : null;
+
+      // 将textboxCoords从obj的局部坐标系转换到canvas的全局坐标系
+      const canvasTextboxCoords = textboxCoords.map(tbPoint => {
+        // 将textbox的坐标点转换为canvas的坐标点
+        let point = new Point(tbPoint.x, tbPoint.y);
+        // 应用obj的变换矩阵
+        point = point.transform(objMatrix);
+        // 如果有父级变换矩阵，继续应用
+        if (parentMatrix) {
+          point = point.transform(parentMatrix);
+        }
+        return point;
+      });
+      coords = canvasTextboxCoords;
+    }
     const viewportZoom = this.getZoom();
     const padding = obj.padding / viewportZoom;
     if (padding) {
@@ -22015,6 +22039,7 @@ class ITextClickBehavior extends ITextKeyBehavior {
     _defineProperty(this, "draggableTextDelegate", void 0);
   }
   initBehavior() {
+    console.log('initBehavior');
     // Initializes event handlers related to cursor or selection
     this.on('mousedown', this._mouseDownHandler);
     this.on('mousedown:before', this._mouseDownHandlerBefore);
@@ -22115,6 +22140,7 @@ class ITextClickBehavior extends ITextKeyBehavior {
     let {
       e
     } = _ref;
+    console.log('mouseDownHandler');
     if (!this.canvas || !this.editable || notALeftClick(e) || this.getActiveControl()) {
       return;
     }
@@ -23369,6 +23395,9 @@ class Textbox extends IText {
  * this is a cheap way to help with chinese/japanese
  * @type Boolean
  * @since 2.6.0
+ */
+/**
+ * 所属对象
  */
 _defineProperty(Textbox, "type", 'Textbox');
 _defineProperty(Textbox, "textLayoutProperties", [...IText.textLayoutProperties, 'width']);
@@ -24773,6 +24802,97 @@ _defineProperty(FabricImage, "CSS_CANVAS", 'canvas-img');
 _defineProperty(FabricImage, "ATTRIBUTE_NAMES", [...SHARED_ATTRIBUTES, 'x', 'y', 'width', 'height', 'preserveAspectRatio', 'xlink:href', 'crossOrigin', 'image-rendering']);
 classRegistry.setClass(FabricImage);
 classRegistry.setSVGClass(FabricImage);
+
+class OlpShape extends Path {
+  constructor() {
+    let options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+    const {
+      width,
+      height,
+      shapeStyle: {
+        type,
+        customPath,
+        viewBox
+      }
+    } = options;
+    let pathData = '';
+    let scaleX = 1;
+    let scaleY = 1;
+    if (type) {
+      if (type === 'rect') {
+        pathData = "M 0 0 L ".concat(width, " 0 L ").concat(width, " ").concat(height, " L 0 ").concat(height, " Z");
+      }
+    } else if (customPath) {
+      pathData = customPath;
+      scaleX = width / viewBox[0];
+      scaleY = height / viewBox[1];
+    }
+    super(pathData, _objectSpread2(_objectSpread2({}, options), {}, {
+      scaleX,
+      scaleY,
+      cornerColor: 'white',
+      // 控制点颜色
+      cornerStyle: 'circle',
+      // 圆形控制点
+      cornerSize: 10,
+      // 控制点大小
+      cornerStrokeColor: 'black',
+      // 控制点边框颜色
+      cornerStrokeWidth: 2,
+      // 控制点边框宽度
+      transparentCorners: false // 使控制点不透明
+    }));
+    _defineProperty(this, "textbox", void 0);
+    _defineProperty(this, "shapePadding", [0, 30, 0, 30]);
+    _defineProperty(this, "textboxWidth", 0);
+    const padding = this.shapePadding;
+    this.textboxWidth = options.width * (options.scaleX || 1) - padding[1] - padding[3];
+    const textbox = new Textbox((options.text || {}).content || '', _objectSpread2(_objectSpread2({}, (options.text || {
+      style: {}
+    }).style), {}, {
+      width: this.textboxWidth,
+      textAlign: 'center',
+      editable: true,
+      left: 0,
+      top: 0,
+      seletable: true,
+      hasControls: false,
+      visible: options.text ? true : false,
+      splitByGrapheme: true,
+      lockMovementX: true,
+      lockMovementY: true,
+      hasBorders: false,
+      hoverCursor: 'text'
+    }));
+    this.objectCaching = false;
+    this.textbox = textbox;
+    textbox.belongsToObject = this;
+  }
+  _render(ctx) {
+    super._render(ctx);
+    this.shapePadding;
+    this.scaleY;
+    const textbox = this.textbox;
+    ctx.save();
+    const transform = ctx.getTransform();
+    ctx.setTransform(1, 0, 0, 1, transform.e, transform.f);
+    const textboxWidth = this.textboxWidth * this.scaleX;
+    textbox.set({
+      left: -textboxWidth / 2,
+      top: -textbox.height / 2,
+      width: textboxWidth
+    });
+    if (!textbox.canvas) {
+      textbox._set('canvas', this.canvas);
+    }
+    textbox.objectCaching = false;
+    textbox.render(ctx);
+    ctx.restore();
+  }
+}
+_defineProperty(OlpShape, "type", 'OlpShape');
+classRegistry.setClass(OlpShape);
+classRegistry.setSVGClass(OlpShape);
 
 /**
  * Add a <g> element that envelop all child elements and makes the viewbox transformMatrix descend on all elements
@@ -28040,5 +28160,5 @@ var filters = /*#__PURE__*/Object.freeze({
   Vintage: Vintage
 });
 
-export { ActiveSelection, BaseBrush, FabricObject$1 as BaseFabricObject, Canvas, Canvas2dFilterBackend, CanvasDOMManager, Circle, CircleBrush, ClipPathLayout, Color, Control, Ellipse, FabricImage, FabricObject, FabricText, FitContentLayout, FixedLayout, Gradient, Group, IText, FabricImage as Image, InteractiveFabricObject, Intersection, LayoutManager, LayoutStrategy, Line, FabricObject as Object, Observable, Path, Pattern, PatternBrush, PencilBrush, Point, Polygon, Polyline, Rect, Shadow, SprayBrush, StaticCanvas, StaticCanvasDOMManager, FabricText as Text, Textbox, Triangle, WebGLFilterBackend, cache, classRegistry, config, index as controlsUtils, createCollectionMixin, filters, getCSSRules, getEnv, getFabricDocument, getFabricWindow, getFilterBackend, iMatrix, initFilterBackend, isPutImageFaster, isWebGLPipelineState, loadSVGFromString, loadSVGFromURL, parseAttributes, parseFontDeclaration, parsePointsAttribute, parseSVGDocument, parseStyleAttribute, parseTransformAttribute, runningAnimations, setEnv, setFilterBackend, index$1 as util, VERSION as version };
+export { ActiveSelection, BaseBrush, FabricObject$1 as BaseFabricObject, Canvas, Canvas2dFilterBackend, CanvasDOMManager, Circle, CircleBrush, ClipPathLayout, Color, Control, Ellipse, FabricImage, FabricObject, FabricText, FitContentLayout, FixedLayout, Gradient, Group, IText, FabricImage as Image, InteractiveFabricObject, Intersection, LayoutManager, LayoutStrategy, Line, FabricObject as Object, Observable, OlpShape, Path, Pattern, PatternBrush, PencilBrush, Point, Polygon, Polyline, Rect, Shadow, SprayBrush, StaticCanvas, StaticCanvasDOMManager, FabricText as Text, Textbox, Triangle, WebGLFilterBackend, cache, classRegistry, config, index as controlsUtils, createCollectionMixin, filters, getCSSRules, getEnv, getFabricDocument, getFabricWindow, getFilterBackend, iMatrix, initFilterBackend, isPutImageFaster, isWebGLPipelineState, loadSVGFromString, loadSVGFromURL, parseAttributes, parseFontDeclaration, parsePointsAttribute, parseSVGDocument, parseStyleAttribute, parseTransformAttribute, runningAnimations, setEnv, setFilterBackend, index$1 as util, VERSION as version };
 //# sourceMappingURL=index.mjs.map

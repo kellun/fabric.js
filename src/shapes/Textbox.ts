@@ -41,9 +41,9 @@ interface UniqueTextboxProps {
 
 export interface SerializedTextboxProps
   extends SerializedITextProps,
-    Pick<UniqueTextboxProps, 'minWidth' | 'splitByGrapheme'> {}
+  Pick<UniqueTextboxProps, 'minWidth' | 'splitByGrapheme'> { }
 
-export interface TextboxProps extends ITextProps, UniqueTextboxProps {}
+export interface TextboxProps extends ITextProps, UniqueTextboxProps { }
 
 /**
  * Textbox class, based on IText, allows the user to resize the text rectangle
@@ -52,13 +52,12 @@ export interface TextboxProps extends ITextProps, UniqueTextboxProps {}
  * wrapping of lines.
  */
 export class Textbox<
-    Props extends TOptions<TextboxProps> = Partial<TextboxProps>,
-    SProps extends SerializedTextboxProps = SerializedTextboxProps,
-    EventSpec extends ITextEvents = ITextEvents,
-  >
+  Props extends TOptions<TextboxProps> = Partial<TextboxProps>,
+  SProps extends SerializedTextboxProps = SerializedTextboxProps,
+  EventSpec extends ITextEvents = ITextEvents,
+>
   extends IText<Props, SProps, EventSpec>
-  implements UniqueTextboxProps
-{
+  implements UniqueTextboxProps {
   /**
    * Minimum width of textbox, in pixels.
    * @type Number
@@ -88,6 +87,11 @@ export class Textbox<
   declare _styleMap: StyleMap;
 
   declare isWrapping: boolean;
+
+  /**
+   * 所属对象
+   */
+  declare belongsToObject: any;
 
   static type = 'Textbox';
 

@@ -44,9 +44,9 @@ type TACoords = TCornerPoint;
 export class ObjectGeometry<EventSpec extends ObjectEvents = ObjectEvents>
   extends CommonMethods<EventSpec>
   implements
-    Pick<ControlProps, 'padding'>,
-    BaseProps,
-    Pick<FillStrokeProps, 'strokeWidth' | 'strokeUniform'>
+  Pick<ControlProps, 'padding'>,
+  BaseProps,
+  Pick<FillStrokeProps, 'strokeWidth' | 'strokeUniform'>
 {
   // #region Geometry
 
@@ -663,7 +663,6 @@ export class ObjectGeometry<EventSpec extends ObjectEvents = ObjectEvents>
       y = point.y;
     const offsetX = resolveOrigin(toOriginX) - resolveOrigin(fromOriginX),
       offsetY = resolveOrigin(toOriginY) - resolveOrigin(fromOriginY);
-
     if (offsetX || offsetY) {
       const dim = this._getTransformedDimensions();
       x += offsetX * dim.x;

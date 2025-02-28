@@ -111,7 +111,7 @@ interface UniqueTextProps {
 
 export interface SerializedTextProps
   extends SerializedObjectProps,
-    UniqueTextProps {
+  UniqueTextProps {
   styles: TextStyleArray | TextStyle;
 }
 
@@ -124,13 +124,12 @@ export interface TextProps extends FabricObjectProps, UniqueTextProps {
  * @tutorial {@link http://fabricjs.com/fabric-intro-part-2#text}
  */
 export class FabricText<
-    Props extends TOptions<TextProps> = Partial<TextProps>,
-    SProps extends SerializedTextProps = SerializedTextProps,
-    EventSpec extends ObjectEvents = ObjectEvents,
-  >
+  Props extends TOptions<TextProps> = Partial<TextProps>,
+  SProps extends SerializedTextProps = SerializedTextProps,
+  EventSpec extends ObjectEvents = ObjectEvents
+>
   extends StyledText<Props, SProps, EventSpec>
-  implements UniqueTextProps
-{
+  implements UniqueTextProps {
   /**
    * Properties that requires a text layout recalculation when changed
    * @type string[]
@@ -579,9 +578,8 @@ export class FabricText<
    * @return {String} String representation of text object
    */
   toString(): string {
-    return `#<Text (${this.complexity()}): { "text": "${
-      this.text
-    }", "fontFamily": "${this.fontFamily}" }>`;
+    return `#<Text (${this.complexity()}): { "text": "${this.text
+      }", "fontFamily": "${this.fontFamily}" }>`;
   }
 
   /**
@@ -645,7 +643,7 @@ export class FabricText<
   _setTextStyles(
     ctx: CanvasRenderingContext2D,
     charStyle?: any,
-    forMeasuring?: boolean,
+    forMeasuring?: boolean
   ) {
     ctx.textBaseline = 'alphabetic';
     if (this.path) {
@@ -697,7 +695,7 @@ export class FabricText<
     line: string[],
     left: number,
     top: number,
-    lineIndex: number,
+    lineIndex: number
   ) {
     this._renderChars(method, ctx, line, left, top, lineIndex);
   }
@@ -745,7 +743,7 @@ export class FabricText<
               -charBox.width / 2,
               (-heightOfLine / this.lineHeight) * (1 - this._fontSizeFraction),
               charBox.width,
-              heightOfLine / this.lineHeight,
+              heightOfLine / this.lineHeight
             );
           ctx.restore();
         } else if (currentColor !== lastColor) {
@@ -759,7 +757,7 @@ export class FabricText<
               drawStart,
               lineTopOffset,
               boxWidth,
-              heightOfLine / this.lineHeight,
+              heightOfLine / this.lineHeight
             );
           boxStart = charBox.left;
           boxWidth = charBox.width;
@@ -778,7 +776,7 @@ export class FabricText<
           drawStart,
           lineTopOffset,
           boxWidth,
-          heightOfLine / this.lineHeight,
+          heightOfLine / this.lineHeight
         );
       }
       lineTopOffset += heightOfLine;
@@ -803,7 +801,7 @@ export class FabricText<
     _char: string,
     charStyle: CompleteTextStyleDeclaration,
     previousChar: string | undefined,
-    prevCharStyle: CompleteTextStyleDeclaration | Record<string, never>,
+    prevCharStyle: CompleteTextStyleDeclaration | Record<string, never>
   ) {
     const fontCache = cache.getFontCache(charStyle),
       fontDeclaration = this._getFontDeclaration(charStyle),
@@ -985,7 +983,7 @@ export class FabricText<
     lineIndex: number,
     charIndex: number,
     prevGrapheme?: string,
-    skipLeft?: boolean,
+    skipLeft?: boolean
   ): GraphemeBBox {
     const style = this.getCompleteStyleDeclaration(lineIndex, charIndex),
       prevStyle = prevGrapheme
@@ -1074,7 +1072,7 @@ export class FabricText<
    */
   _renderTextCommon(
     ctx: CanvasRenderingContext2D,
-    method: 'fillText' | 'strokeText',
+    method: 'fillText' | 'strokeText'
   ) {
     ctx.save();
     let lineHeights = 0;
@@ -1090,7 +1088,7 @@ export class FabricText<
         this._textLines[i],
         left + leftOffset,
         top + lineHeights + maxHeight,
-        i,
+        i
       );
       lineHeights += heightOfLine;
     }
@@ -1145,7 +1143,7 @@ export class FabricText<
     line: Array<any>,
     left: number,
     top: number,
-    lineIndex: number,
+    lineIndex: number
   ) {
     const lineHeight = this.getHeightOfLine(lineIndex),
       isJustify = this.textAlign.includes(JUSTIFY),
@@ -1217,7 +1215,7 @@ export class FabricText<
             i,
             charsToRender,
             -boxWidth / 2,
-            0,
+            0
           );
           ctx.restore();
         } else {
@@ -1229,7 +1227,7 @@ export class FabricText<
             i,
             charsToRender,
             drawingLeft,
-            top,
+            top
           );
         }
         charsToRender = '';
@@ -1279,7 +1277,7 @@ export class FabricText<
   handleFiller<T extends 'fill' | 'stroke'>(
     ctx: CanvasRenderingContext2D,
     property: `${T}Style`,
-    filler: TFiller | string,
+    filler: TFiller | string
   ): { offsetX: number; offsetY: number } {
     let offsetX: number, offsetY: number;
     if (isFiller(filler)) {
@@ -1321,7 +1319,7 @@ export class FabricText<
     {
       stroke,
       strokeWidth,
-    }: Pick<CompleteTextStyleDeclaration, 'stroke' | 'strokeWidth'>,
+    }: Pick<CompleteTextStyleDeclaration, 'stroke' | 'strokeWidth'>
   ) {
     ctx.lineWidth = strokeWidth;
     ctx.lineCap = this.strokeLineCap;
@@ -1360,7 +1358,7 @@ export class FabricText<
     charIndex: number,
     _char: string,
     left: number,
-    top: number,
+    top: number
   ) {
     const decl = this._getStyleDeclaration(lineIndex, charIndex),
       fullDecl = this.getCompleteStyleDeclaration(lineIndex, charIndex),
@@ -1387,7 +1385,7 @@ export class FabricText<
       ctx.fillText(
         _char,
         left - fillOffsets.offsetX,
-        top - fillOffsets.offsetY,
+        top - fillOffsets.offsetY
       );
     }
 
@@ -1396,7 +1394,7 @@ export class FabricText<
       ctx.strokeText(
         _char,
         left - strokeOffsets.offsetX,
-        top - strokeOffsets.offsetY,
+        top - strokeOffsets.offsetY
       );
     }
 
@@ -1434,13 +1432,13 @@ export class FabricText<
     schema: {
       size: number;
       baseline: number;
-    },
+    }
   ) {
     const loc = this.get2DCursorLocation(start, true),
       fontSize = this.getValueOfPropertyAt(
         loc.lineIndex,
         loc.charIndex,
-        'fontSize',
+        'fontSize'
       ),
       dy = this.getValueOfPropertyAt(loc.lineIndex, loc.charIndex, 'deltaY'),
       style = {
@@ -1542,7 +1540,7 @@ export class FabricText<
   getValueOfPropertyAt<T extends StylePropertiesType>(
     lineIndex: number,
     charIndex: number,
-    property: T,
+    property: T
   ): this[T] {
     const charStyle = this._getStyleDeclaration(lineIndex, charIndex);
     return (charStyle[property] ?? this[property]) as this[T];
@@ -1554,7 +1552,7 @@ export class FabricText<
    */
   _renderTextDecoration(
     ctx: CanvasRenderingContext2D,
-    type: 'underline' | 'linethrough' | 'overline',
+    type: 'underline' | 'linethrough' | 'overline'
   ) {
     if (!this[type] && !this.styleHas(type)) {
       return;
@@ -1599,7 +1597,7 @@ export class FabricText<
             -charBox.kernedWidth / 2,
             offsetY * currentSize + currentDy,
             charBox.kernedWidth,
-            this.fontSize / 15,
+            this.fontSize / 15
           );
           ctx.restore();
         } else if (
@@ -1620,7 +1618,7 @@ export class FabricText<
               drawStart,
               top + offsetY * size + dy,
               boxWidth,
-              this.fontSize / 15,
+              this.fontSize / 15
             );
           }
           boxStart = charBox.left;
@@ -1644,7 +1642,7 @@ export class FabricText<
           drawStart,
           top + offsetY * size + dy,
           boxWidth - charSpacing,
-          this.fontSize / 15,
+          this.fontSize / 15
         );
       topOffset += heightOfLine;
     }
@@ -1670,13 +1668,13 @@ export class FabricText<
         'fontFamily' | 'fontStyle' | 'fontWeight' | 'fontSize'
       >
     > = {},
-    forMeasuring?: boolean,
+    forMeasuring?: boolean
   ): string {
     const parsedFontFamily =
       fontFamily.includes("'") ||
-      fontFamily.includes('"') ||
-      fontFamily.includes(',') ||
-      FabricText.genericFonts.includes(fontFamily.toLowerCase())
+        fontFamily.includes('"') ||
+        fontFamily.includes(',') ||
+        FabricText.genericFonts.includes(fontFamily.toLowerCase())
         ? fontFamily
         : `"${fontFamily}"`;
     return [
@@ -1751,7 +1749,7 @@ export class FabricText<
    */
   toObject<
     T extends Omit<Props & TClassProperties<this>, keyof SProps>,
-    K extends keyof T = never,
+    K extends keyof T = never
   >(propertiesToInclude: K[] = []): Pick<T, K> & SProps {
     return {
       ...super.toObject([...additionalProps, ...propertiesToInclude] as K[]),
@@ -1834,7 +1832,7 @@ export class FabricText<
     'font-size',
     'letter-spacing',
     'text-decoration',
-    'text-anchor',
+    'text-anchor'
   );
 
   /**
@@ -1847,12 +1845,12 @@ export class FabricText<
   static async fromElement(
     element: HTMLElement,
     options: Abortable,
-    cssRules?: CSSRules,
+    cssRules?: CSSRules
   ) {
     const parsedAttributes = parseAttributes(
       element,
       FabricText.ATTRIBUTE_NAMES,
-      cssRules,
+      cssRules
     );
 
     const {
@@ -1875,16 +1873,16 @@ export class FabricText<
     // this can later looked at again and probably removed.
 
     const text = new this(textContent, {
-        left: left + dx,
-        top: top + dy,
-        underline: textDecoration.includes('underline'),
-        overline: textDecoration.includes('overline'),
-        linethrough: textDecoration.includes('line-through'),
-        // we initialize this as 0
-        strokeWidth: 0,
-        fontSize,
-        ...restOfOptions,
-      }),
+      left: left + dx,
+      top: top + dy,
+      underline: textDecoration.includes('underline'),
+      overline: textDecoration.includes('overline'),
+      linethrough: textDecoration.includes('line-through'),
+      // we initialize this as 0
+      strokeWidth: 0,
+      fontSize,
+      ...restOfOptions,
+    }),
       textHeightScaleFactor = text.getScaledHeight() / text.height,
       lineHeightDiff =
         (text.height + text.strokeWidth) * text.lineHeight - text.height,
@@ -1908,7 +1906,7 @@ export class FabricText<
       top:
         text.top -
         (textHeight - text.fontSize * (0.07 + text._fontSizeFraction)) /
-          text.lineHeight,
+        text.lineHeight,
       strokeWidth,
     });
     return text;
@@ -1923,7 +1921,7 @@ export class FabricText<
    */
   static fromObject<
     T extends TOptions<SerializedTextProps>,
-    S extends FabricText,
+    S extends FabricText
   >(object: T) {
     return this._fromObject<S>(
       {
@@ -1932,7 +1930,7 @@ export class FabricText<
       },
       {
         extraParam: 'text',
-      },
+      }
     );
   }
 }
