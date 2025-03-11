@@ -43,7 +43,7 @@ import type { DrawContext } from './Object/Object';
  * This layout manager doesn't do anything and therefore keeps the exact layout the group had when {@link Group#toObject} was called.
  */
 class NoopLayoutManager extends LayoutManager {
-  performLayout() {}
+  performLayout() { }
 }
 
 export interface GroupEvents extends ObjectEvents, CollectionEvents {
@@ -58,7 +58,7 @@ export interface GroupOwnProps {
 
 export interface SerializedGroupProps
   extends SerializedObjectProps,
-    GroupOwnProps {
+  GroupOwnProps {
   objects: SerializedObjectProps[];
   layoutManager: SerializedLayoutManager;
 }
@@ -83,8 +83,7 @@ export class Group
   extends createCollectionMixin(
     FabricObject<GroupProps, SerializedGroupProps, GroupEvents>,
   )
-  implements GroupProps
-{
+  implements GroupProps {
   /**
    * Used to optimize performance
    * set to `false` if you don't need contained objects to be targets of events
@@ -651,9 +650,9 @@ export class Group
    */
   getSvgStyles(): string {
     const opacity =
-        typeof this.opacity !== 'undefined' && this.opacity !== 1
-          ? `opacity: ${this.opacity};`
-          : '',
+      typeof this.opacity !== 'undefined' && this.opacity !== 1
+        ? `opacity: ${this.opacity};`
+        : '',
       visibility = this.visible ? '' : ' visibility: hidden;';
     return [opacity, this.getSvgFilter(), visibility].join('');
   }
@@ -715,6 +714,16 @@ export class Group
       group.setCoords();
       return group;
     });
+  }
+
+  /**
+   * 设置组内活动对象
+   */
+  setActiveObject(object: FabricObject) {
+    if (!this.contains(object)) {
+      return;
+    }
+    this.canvas?.setActiveObject(object);
   }
 }
 

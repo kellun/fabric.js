@@ -149,8 +149,7 @@ import { OlpShape } from '../../fabric';
  */
 export class SelectableCanvas<EventSpec extends CanvasEvents = CanvasEvents>
   extends StaticCanvas<EventSpec>
-  implements Omit<CanvasOptions, 'enablePointerEvents'>
-{
+  implements Omit<CanvasOptions, 'enablePointerEvents'> {
   declare _objects: FabricObject[];
 
   // transform config
@@ -308,6 +307,24 @@ export class SelectableCanvas<EventSpec extends CanvasEvents = CanvasEvents>
   protected declare _isCurrentlyDrawing: boolean;
   declare freeDrawingBrush?: BaseBrush;
   declare _activeObject?: FabricObject;
+  declare _activeObjects: FabricObject[];
+
+  private _addToActiveObjects(obj: FabricObject) {
+    if (!this._activeObjects.includes(obj)) {
+      this._activeObjects.push(obj);
+    }
+  }
+
+  private _removeFromActiveObjects(obj: FabricObject) {
+    const index = this._activeObjects.indexOf(obj);
+    if (index > -1) {
+      this._activeObjects.splice(index, 1);
+    }
+  }
+
+  private _clearActiveObjects() {
+    this._activeObjects.length = 0;
+  }
 
   protected initElements(el?: string | HTMLCanvasElement) {
     this.elements = new CanvasDOMManager(el, {
@@ -584,9 +601,9 @@ export class SelectableCanvas<EventSpec extends CanvasEvents = CanvasEvents>
 
   /**
    * @private
-   * @param {Event} e Event object
-   * @param {FabricObject} target
-   * @param {boolean} [alreadySelected] pass true to setup the active control
+   * @param {Event} e 事件对象
+   * @param {FabricObject} target 目标对象
+   * @param {boolean} [alreadySelected] 如果为 true，则设置活动控制
    */
   _setupCurrentTransform(
     e: TPointerEvent,
@@ -594,60 +611,61 @@ export class SelectableCanvas<EventSpec extends CanvasEvents = CanvasEvents>
     alreadySelected: boolean,
   ): void {
     const pointer = target.group
-      ? // transform pointer to target's containing coordinate plane
+      ? // 将指针转换为目标的包含坐标平面
       sendPointToPlane(
         this.getScenePoint(e),
         undefined,
         target.group.calcTransformMatrix(),
       )
-      : this.getScenePoint(e);
-    const { key: corner = '', control } = target.getActiveControl() || {},
+      : this.getScenePoint(e); // 获取场景中的指针位置
+
+    const { key: corner = '', control } = target.getActiveControl() || {}, // 获取活动控制点
       actionHandler =
         alreadySelected && control
-          ? control.getActionHandler(e, target, control)?.bind(control)
-          : dragHandler,
-      action = getActionFromCorner(alreadySelected, corner, e, target),
-      altKey = e[this.centeredKey as ModifierKey],
+          ? control.getActionHandler(e, target, control)?.bind(control) // 获取控制点的动作处理函数
+          : dragHandler, // 默认使用拖动处理函数
+      action = getActionFromCorner(alreadySelected, corner, e, target), // 获取动作类型
+      altKey = e[this.centeredKey as ModifierKey], // 获取 Alt 键状态
       origin = this._shouldCenterTransform(target, action, altKey)
-        ? ({ x: CENTER, y: CENTER } as const)
-        : this._getOriginFromCorner(target, corner),
+        ? ({ x: CENTER, y: CENTER } as const) // 如果需要中心变换，设置原点为中心
+        : this._getOriginFromCorner(target, corner), // 否则从控制点获取原点
+
       /**
-       * relative to target's containing coordinate plane
-       * both agree on every point
+       * 相对于目标的包含坐标平面
+       * 两者在每个点上都一致
        **/
       transform: Transform = {
-        target: target,
-        action,
-        actionHandler,
-        actionPerformed: false,
-        corner,
-        scaleX: target.scaleX,
-        scaleY: target.scaleY,
-        skewX: target.skewX,
-        skewY: target.skewY,
-        offsetX: pointer.x - target.left,
-        offsetY: pointer.y - target.top,
-        originX: origin.x,
-        originY: origin.y,
-        ex: pointer.x,
-        ey: pointer.y,
-        lastX: pointer.x,
-        lastY: pointer.y,
-        theta: degreesToRadians(target.angle),
-        width: target.width,
-        height: target.height,
-        shiftKey: e.shiftKey,
-        altKey,
+        target: target, // 目标对象
+        action, // 动作类型
+        actionHandler, // 动作处理函数
+        actionPerformed: false, // 动作是否已执行
+        corner, // 控制点
+        scaleX: target.scaleX, // X 轴缩放
+        scaleY: target.scaleY, // Y 轴缩放
+        skewX: target.skewX, // X 轴倾斜
+        skewY: target.skewY, // Y 轴倾斜
+        offsetX: pointer.x - target.left, // X 轴偏移量
+        offsetY: pointer.y - target.top, // Y 轴偏移量
+        originX: origin.x, // 原点 X 坐标
+        originY: origin.y, // 原点 Y 坐标
+        ex: pointer.x, // 指针 X 坐标
+        ey: pointer.y, // 指针 Y 坐标
+        lastX: pointer.x, // 上一个 X 坐标
+        lastY: pointer.y, // 上一个 Y 坐标
+        theta: degreesToRadians(target.angle), // 目标角度（弧度）
+        width: target.width, // 目标宽度
+        height: target.height, // 目标高度
+        shiftKey: e.shiftKey, // Shift 键状态
+        altKey, // Alt 键状态
         original: {
-          ...saveObjectTransform(target),
-          originX: origin.x,
-          originY: origin.y,
+          ...saveObjectTransform(target), // 保存目标的原始变换
+          originX: origin.x, // 原点 X 坐标
+          originY: origin.y, // 原点 Y 坐标
         },
       };
 
-    this._currentTransform = transform;
-
-    this.fire('before:transform', {
+    this._currentTransform = transform; // 设置当前变换
+    this.fire('before:transform', { // 触发变换前事件
       e,
       transform,
     });
@@ -704,60 +722,55 @@ export class SelectableCanvas<EventSpec extends CanvasEvents = CanvasEvents>
   }
 
   /**
-   * Method that determines what object we are clicking on
-   * 11/09/2018 TODO: would be cool if findTarget could discern between being a full target
-   * or the outside part of the corner.
-   * @param {Event} e mouse event
-   * @return {FabricObject | null} the target found
+   * 方法用于确定我们点击的是哪个对象
+   * 11/09/2018 TODO: 如果 findTarget 能够区分是完整目标还是角落的外部部分，那就太好了。
+   * @param {Event} e 鼠标事件
+   * @return {FabricObject | null} 找到的目标
    */
   findTarget(e: TPointerEvent): FabricObject | undefined {
-    if (this.skipTargetFind) {
-      return undefined;
+    if (this.skipTargetFind) { // 如果跳过目标查找
+      return undefined; // 返回未定义
     }
 
-    const pointer = this.getViewportPoint(e),
-      activeObject = this._activeObject,
-      aObjects = this.getActiveObjects();
+    const pointer = this.getViewportPoint(e), // 获取鼠标在视口中的位置
+      activeObject = this._activeObject, // 获取当前活动对象
+      aObjects = this.getActiveObjects(); // 获取所有活动对象
 
-    this.targets = [];
-
-    if (activeObject && aObjects.length >= 1) {
-      if (activeObject.findControl(pointer, isTouchEvent(e))) {
-        // if we hit the corner of the active object, let's return that.
-        return activeObject;
+    this.targets = []; // 初始化目标数组
+    if (activeObject && aObjects.length >= 1) { // 如果有活动对象且活动对象数量大于等于1
+      if (activeObject.findControl(pointer, isTouchEvent(e))) { // 检查鼠标是否点击了活动对象的控制点
+        return activeObject; // 如果点击了控制点，返回活动对象
       } else if (
         aObjects.length > 1 &&
-        // check pointer is over active selection and possibly perform `subTargetCheck`
+        // 检查鼠标指针是否在活动选择上，并可能执行 `subTargetCheck`
         this.searchPossibleTargets([activeObject], pointer)
       ) {
-        // active selection does not select sub targets like normal groups
-        return activeObject;
+        return activeObject; // 如果活动选择中有多个对象，返回活动对象
       } else if (
         activeObject === this.searchPossibleTargets([activeObject], pointer)
       ) {
-        // active object is not an active selection
+        // 如果活动对象不是活动选择
         if (!this.preserveObjectStacking) {
-          return activeObject;
+          return activeObject; // 如果不保留对象堆叠，返回活动对象
         } else {
-          const subTargets = this.targets;
-          this.targets = [];
-          const target = this.searchPossibleTargets(this._objects, pointer);
+          const subTargets = this.targets; // 保存当前目标
+          this.targets = []; // 清空目标数组
+          const target = this.searchPossibleTargets(this._objects, pointer); // 查找可能的目标
           if (
-            e[this.altSelectionKey as ModifierKey] &&
+            e[this.altSelectionKey as ModifierKey] && // 如果按下了 alt 键
             target &&
             target !== activeObject
           ) {
-            // alt selection: select active object even though it is not the top most target
-            // restore targets
-            this.targets = subTargets;
-            return activeObject;
+            // alt 选择：即使活动对象不是最上面的目标，也选择活动对象
+            this.targets = subTargets; // 恢复目标
+            return activeObject; // 返回活动对象
           }
-          return target;
+          return target; // 返回找到的目标
         }
       }
     }
 
-    return this.searchPossibleTargets(this._objects, pointer);
+    return this.searchPossibleTargets(this._objects, pointer); // 查找所有对象中的可能目标
   }
 
   /**
@@ -858,72 +871,70 @@ export class SelectableCanvas<EventSpec extends CanvasEvents = CanvasEvents>
   }
 
   /**
-   * Internal Function used to search inside objects an object that contains pointer in bounding box or that contains pointerOnCanvas when painted
-   * @param {Array} [objects] objects array to look into
-   * @param {Object} [pointer] x,y object of point coordinates we want to check.
-   * @return {FabricObject} **top most object from given `objects`** that contains pointer
+   * 内部函数，用于在对象数组中查找包含指针的对象（在边界框内或绘制时包含 pointerOnCanvas）
+   * @param {Array} [objects] 要查找的对象数组
+   * @param {Object} [pointer] 要检查的指针坐标对象（x, y）
+   * @return {FabricObject} **从给定 `objects` 中找到的最上层对象**，包含指针
    * @private
    */
   _searchPossibleTargets(
     objects: FabricObject[],
     pointer: Point,
   ): FabricObject | undefined {
-    // Cache all targets where their bounding box contains point.
-    let i = objects.length;
-    // Do not check for currently grouped objects, since we check the parent group itself.
-    // until we call this function specifically to search inside the activeGroup
-    while (i--) {
-      const target = objects[i];
-      if (this._checkTarget(target, pointer)) {
-        if (isCollection(target) && target.subTargetCheck) {
-          const subTarget = this._searchPossibleTargets(
+    // 缓存所有边界框包含指针的目标对象
+    let i = objects.length; // 从数组末尾开始遍历
+    // 不要检查当前分组的对象，因为我们检查的是父组本身
+    // 除非我们专门调用此函数来搜索活动组内部
+    while (i--) { // 从后向前遍历对象数组
+      const target = objects[i]; // 获取当前对象
+      if (this._checkTarget(target, pointer)) { // 检查目标对象是否包含指针
+        if (isCollection(target) && target.subTargetCheck) { // 如果目标是集合且需要检查子目标
+          const subTarget = this._searchPossibleTargets( // 递归查找子目标
             target._objects as FabricObject[],
             pointer,
           );
-          subTarget && this.targets.push(subTarget);
+          subTarget && this.targets.push(subTarget); // 如果找到子目标，将其添加到目标数组中
         }
-        return target;
+        return target; // 返回找到的目标对象
       }
     }
   }
 
   /**
-   * Function used to search inside objects an object that contains pointer in bounding box or that contains pointerOnCanvas when painted
+   * 函数用于在对象中搜索包含指针在边界框内的对象，或者在绘制时包含 pointerOnCanvas 的对象
    * @see {@link _searchPossibleTargets}
-   * @param {FabricObject[]} [objects] objects array to look into
-   * @param {Point} [pointer] coordinates from viewport to check.
-   * @return {FabricObject} **top most object on screen** that contains pointer
+   * @param {FabricObject[]} [objects] 要查找的对象数组
+   * @param {Point} [pointer] 要检查的视口坐标
+   * @return {FabricObject} **屏幕上最上面的** 包含指针的对象
    */
   searchPossibleTargets(
     objects: FabricObject[],
     pointer: Point,
   ): FabricObject | undefined {
-    const target = this._searchPossibleTargets(objects, pointer);
+    const target = this._searchPossibleTargets(objects, pointer); // 调用内部方法查找目标
 
-    // if we found something in this.targets, and the group is interactive, return the innermost subTarget
-    // that is still interactive
-    // TODO: reverify why interactive. the target should be returned always, but selected only
-    // if interactive.
+    // 如果在 this.targets 中找到了目标，并且该组是可交互的，则返回最内层的子目标
+    // TODO: 重新验证为什么是可交互的。目标应该始终返回，但仅在可交互时选择。
     if (
       target &&
-      isCollection(target) &&
-      target.interactive &&
-      this.targets[0]
+      isCollection(target) && // 检查目标是否为集合
+      target.interactive && // 检查目标是否可交互
+      this.targets[0] // 确保 targets 数组中有元素
     ) {
-      /** targets[0] is the innermost nested target, but it could be inside non interactive groups and so not a selection target */
-      const targets = this.targets;
-      for (let i = targets.length - 1; i > 0; i--) {
+      /** targets[0] 是最内层的嵌套目标，但它可能在非交互组内，因此不是选择目标 */
+      const targets = this.targets; // 保存当前目标数组
+      for (let i = targets.length - 1; i > 0; i--) { // 从后向前遍历目标数组
         const t = targets[i];
-        if (!(isCollection(t) && t.interactive)) {
-          // one of the subtargets was not interactive. that is the last subtarget we can return.
-          // we can't dig more deep;
-          return t;
+        if (!(isCollection(t) && t.interactive)) { // 如果某个子目标不是交互的
+          // 其中一个子目标不是交互的。那就是我们可以返回的最后一个子目标。
+          // 我们不能再深入查找；
+          return t; // 返回最后一个可交互的子目标
         }
       }
-      return targets[0];
+      return targets[0]; // 返回最内层的目标
     }
 
-    return target;
+    return target; // 返回找到的目标
   }
 
   /**
@@ -1335,15 +1346,35 @@ export class SelectableCanvas<EventSpec extends CanvasEvents = CanvasEvents>
     super.clear();
   }
 
+  cancelActiveObjects(e?: TPointerEvent) {
+    if (this._activeObjects && this._activeObjects.length) {
+      this._activeObjects.forEach((obj) => {
+        this.fire('before:selection:cleared', {
+          e,
+          deselected: [obj],
+        });
+      });
+      this._activeObjects = [];
+    }
+  }
+
+
   /**
-   * Draws objects' controls (borders/controls)
-   * @param {CanvasRenderingContext2D} ctx Context to render controls on
+   * 绘制对象的控制元素（边框/控制点）
+   * @param {CanvasRenderingContext2D} ctx 要在其上渲染控制元素的上下文
    */
   drawControls(ctx: CanvasRenderingContext2D) {
-    const activeObject = this._activeObject;
+    console.log(this._activeObjects)
+    // const activeObject = this._activeObject; // 获取当前活动对象
 
-    if (activeObject) {
-      activeObject._renderControls(ctx);
+    // if (activeObject) { // 如果存在活动对象
+    //   activeObject._renderControls(ctx); // 调用活动对象的渲染控制方法
+    // }
+    const activeObjects = this._activeObjects;
+    if (activeObjects?.length) {
+      activeObjects.forEach((obj) => {
+        obj._renderControls(ctx);
+      });
     }
   }
 

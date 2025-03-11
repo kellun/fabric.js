@@ -18,9 +18,9 @@ export interface ActiveSelectionOptions extends GroupProps {
 }
 
 const activeSelectionDefaultValues: Partial<TClassProperties<ActiveSelection>> =
-  {
-    multiSelectionStacking: 'canvas-stacking',
-  };
+{
+  multiSelectionStacking: 'canvas-stacking',
+};
 
 /**
  * Used by Canvas to manage selection.
@@ -57,18 +57,29 @@ export class ActiveSelection extends Group {
    */
   declare multiSelectionStacking: MultiSelectionStacking;
 
-  constructor(
-    objects: FabricObject[] = [],
-    options: Partial<ActiveSelectionOptions> = {},
-  ) {
-    super();
-    Object.assign(this, ActiveSelection.ownDefaults);
-    this.setOptions(options);
-    const { left, top, layoutManager } = options;
-    this.groupInit(objects, {
-      left,
-      top,
-      layoutManager: layoutManager ?? new ActiveSelectionLayoutManager(),
+  constructor(objects: FabricObject[], options?: any) {
+    super(objects, options);
+
+    // 移除边框和背景色
+    this.set({
+      fill: 'transparent',
+      stroke: 'transparent',
+      strokeWidth: 0,
+      hasControls: false,
+      hasBorders: false,
+      lockMovementX: false,
+      lockMovementY: false,
+      evented: true,
+      selectable: true,
+      lockScalingX: false,
+      lockScalingY: false,
+      lockRotation: false,
+      lockSkewingX: false,
+      lockSkewingY: false,
+      touchCornerSize: 24,
+      transparentCorners: false,
+      perPixelTargetFind: false,
+      targetFindTolerance: 0
     });
   }
 
@@ -102,7 +113,7 @@ export class ActiveSelection extends Group {
         const insertAt =
           index === -1
             ? //  `target` is in front of all other objects
-              this.size()
+            this.size()
             : index;
         this.insertAt(insertAt, target);
       });

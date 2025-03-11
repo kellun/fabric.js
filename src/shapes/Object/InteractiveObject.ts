@@ -41,13 +41,12 @@ export type TStyleOverride = ControlRenderingStyleOverride &
   >;
 
 export class InteractiveFabricObject<
-    Props extends TFabricObjectProps = Partial<FabricObjectProps>,
-    SProps extends SerializedObjectProps = SerializedObjectProps,
-    EventSpec extends ObjectEvents = ObjectEvents,
-  >
+  Props extends TFabricObjectProps = Partial<FabricObjectProps>,
+  SProps extends SerializedObjectProps = SerializedObjectProps,
+  EventSpec extends ObjectEvents = ObjectEvents,
+>
   extends FabricObject<Props, SProps, EventSpec>
-  implements FabricObjectProps
-{
+  implements FabricObjectProps {
   declare noScaleCache: boolean;
 
   declare snapAngle?: TDegree;
@@ -195,10 +194,10 @@ export class InteractiveFabricObject<
     const key = this.__corner;
     return key
       ? {
-          key,
-          control: this.controls[key],
-          coord: this.oCoords[key],
-        }
+        key,
+        control: this.controls[key],
+        coord: this.oCoords[key],
+      }
       : undefined;
   }
 
@@ -426,45 +425,44 @@ export class InteractiveFabricObject<
   }
 
   /**
-   * Renders controls and borders for the object
-   * the context here is not transformed
-   * @todo move to interactivity
-   * @param {CanvasRenderingContext2D} ctx Context to render on
-   * @param {TStyleOverride} [styleOverride] properties to override the object style
+   * 渲染对象的控制元素和边框
+   * 这里的上下文没有被变换
+   * @todo 移动到交互性
+   * @param {CanvasRenderingContext2D} ctx 要渲染的上下文
+   * @param {TStyleOverride} [styleOverride] 用于覆盖对象样式的属性
    */
   _renderControls(
     ctx: CanvasRenderingContext2D,
     styleOverride: TStyleOverride = {},
   ) {
-    const { hasBorders, hasControls } = this;
+    const { hasBorders, hasControls } = this; // 获取对象的边框和控制元素的状态
     const styleOptions = {
       hasBorders,
       hasControls,
-      ...styleOverride,
+      ...styleOverride, // 合并样式覆盖选项
     };
-    const vpt = this.getViewportTransform(),
-      shouldDrawBorders = styleOptions.hasBorders,
-      shouldDrawControls = styleOptions.hasControls;
-    const matrix = multiplyTransformMatrices(vpt, this.calcTransformMatrix());
-    const options = qrDecompose(matrix);
-    ctx.save();
-    ctx.translate(options.translateX, options.translateY);
-    ctx.lineWidth = this.borderScaleFactor; // 1 * this.borderScaleFactor;
-    // since interactive groups have been introduced, an object could be inside a group and needing controls
-    // the following equality check `this.group === this.parent` covers:
-    // object without a group ( undefined === undefined )
-    // object inside a group
-    // excludes object inside a group but multi selected since group and parent will differ in value
+    const vpt = this.getViewportTransform(), // 获取视口变换
+      shouldDrawBorders = styleOptions.hasBorders, // 是否绘制边框
+      shouldDrawControls = styleOptions.hasControls; // 是否绘制控制元素
+    const matrix = multiplyTransformMatrices(vpt, this.calcTransformMatrix()); // 计算变换矩阵
+    const options = qrDecompose(matrix); // 分解矩阵以获取平移和旋转信息
+    ctx.save(); // 保存当前上下文状态
+    ctx.translate(options.translateX, options.translateY); // 应用平移
+    ctx.lineWidth = this.borderScaleFactor; // 设置边框线宽
+
+    // 检查对象是否在组中并需要控制元素
     if (this.group === this.parent) {
-      ctx.globalAlpha = this.isMoving ? this.borderOpacityWhenMoving : 1;
+      ctx.globalAlpha = this.isMoving ? this.borderOpacityWhenMoving : 1; // 设置透明度
     }
     if (this.flipX) {
-      options.angle -= 180;
+      options.angle -= 180; // 如果对象水平翻转，调整角度
     }
-    ctx.rotate(degreesToRadians(this.group ? options.angle : this.angle));
-    shouldDrawBorders && this.drawBorders(ctx, options, styleOverride);
-    shouldDrawControls && this.drawControls(ctx, styleOverride);
-    ctx.restore();
+    ctx.rotate(degreesToRadians(this.group ? options.angle : this.angle)); // 应用旋转
+
+    // 根据条件绘制边框和控制元素
+    shouldDrawBorders && this.drawBorders(ctx, options, styleOverride); // 绘制边框
+    shouldDrawControls && this.drawControls(ctx, styleOverride); // 绘制控制元素
+    ctx.restore(); // 恢复上下文状态
   }
 
   /**
@@ -483,17 +481,17 @@ export class InteractiveFabricObject<
     let size;
     if ((styleOverride && styleOverride.forActiveSelection) || this.group) {
       const bbox = sizeAfterTransform(
-          this.width,
-          this.height,
-          calcDimensionsMatrix(options),
-        ),
+        this.width,
+        this.height,
+        calcDimensionsMatrix(options),
+      ),
         stroke = !this.isStrokeAccountedForInDimensions()
           ? (this.strokeUniform
-              ? new Point().scalarAdd(this.canvas ? this.canvas.getZoom() : 1)
-              : // this is extremely confusing. options comes from the upper function
-                // and is the qrDecompose of a matrix that takes in account zoom too
-                new Point(options.scaleX, options.scaleY)
-            ).scalarMultiply(this.strokeWidth)
+            ? new Point().scalarAdd(this.canvas ? this.canvas.getZoom() : 1)
+            : // this is extremely confusing. options comes from the upper function
+            // and is the qrDecompose of a matrix that takes in account zoom too
+            new Point(options.scaleX, options.scaleY)
+          ).scalarMultiply(this.strokeWidth)
           : ZERO;
       size = bbox
         .add(stroke)
