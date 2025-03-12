@@ -1161,47 +1161,68 @@ export class Canvas extends SelectableCanvas implements CanvasOptions {
   }
 
   /**
-   * Method that defines the actions when mouse is hovering the canvas.
-   * The currentTransform parameter will define whether the user is rotating/scaling/translating
-   * an image or neither of them (only hovering). A group selection is also possible and would cancel
-   * all any other type of action.
-   * In case of an image transformation only the top canvas will be rendered.
-   * @private
-   * @param {Event} e Event object fired on mousemove
+   * 处理鼠标移动事件的方法。
+   * 该方法会根据当前的画布状态和鼠标位置执行不同的操作，
+   * 例如在绘图模式下处理鼠标移动、绘制多选框、设置光标样式、触发对象变换等。
+   *
+   * @param {TPointerEvent} e - 触发的鼠标移动事件对象。
    */
   __onMouseMove(e: TPointerEvent) {
+    // 标记当前操作不是点击操作
     this._isClick = false;
+    // 缓存事件处理过程中所需的常见信息
     this._cacheTransformEventData(e);
+    // 触发 'move:before' 事件
     this._handleEvent(e, 'move:before');
 
+    // 如果处于绘图模式
     if (this.isDrawingMode) {
+      // 调用绘图模式下的鼠标移动处理方法
       this._onMouseMoveInDrawingMode(e);
+      // 处理完绘图模式的鼠标移动后，直接返回
       return;
     }
 
+    // 如果当前事件不是主事件，则不进行后续处理
     if (!this._isMainEvent(e)) {
       return;
     }
 
+    // 获取多选框选择器对象
     const groupSelector = this._groupSelector;
 
-    // We initially clicked in an empty area, so we draw a box for multiple selection
+    // 如果多选框选择器存在，说明最初点击在空白区域，需要绘制多选框
     if (groupSelector) {
+      // 获取鼠标在场景中的位置
       const pointer = this.getScenePoint(e);
 
+      // 计算多选框在 x 轴上的偏移量
       groupSelector.deltaX = pointer.x - groupSelector.x;
+      // 计算多选框在 y 轴上的偏移量
       groupSelector.deltaY = pointer.y - groupSelector.y;
 
+      // 渲染顶部画布
       this.renderTop();
-    } else if (!this._currentTransform) {
+    }
+    // 如果当前没有正在进行的变换操作
+    else if (!this._currentTransform) {
+      // 查找鼠标下方的目标对象
       const target = this.findTarget(e);
+      // 根据鼠标事件和目标对象设置光标样式
       this._setCursorFromEvent(e, target);
+      // 触发目标对象的鼠标悬停和移出事件
       this._fireOverOutEvents(e, target);
-    } else {
+    }
+    // 如果正在进行变换操作
+    else {
+      // 对对象进行变换操作
       this._transformObject(e);
     }
+    // 调用文本编辑管理器的鼠标移动处理方法
     this.textEditingManager.onMouseMove(e);
+    // 触发 'move' 事件
     this._handleEvent(e, 'move');
+    // 重置事件处理过程中缓存的变换数据
     this._resetTransformEventData();
   }
 
