@@ -113,7 +113,7 @@ export const interactiveObjectDefaultValues: Partial<
   cornerStyle: 'circle',
   cornerDashArray: null,
   hasControls: true,
-  borderColor: 'rgb(178,204,255)',
+  borderColor: 'black',
   borderDashArray: null,
   borderOpacityWhenMoving: 0.4,
   borderScaleFactor: 1,

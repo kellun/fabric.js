@@ -5247,7 +5247,7 @@ const interactiveObjectDefaultValues = {
   cornerStyle: 'circle',
   cornerDashArray: null,
   hasControls: true,
-  borderColor: 'rgb(178,204,255)',
+  borderColor: 'black',
   borderDashArray: null,
   borderOpacityWhenMoving: 0.4,
   borderScaleFactor: 1,
@@ -8557,24 +8557,35 @@ class Control {
    */
 
   /**
-   * The control mouseUpHandler, provide one to handle an effect on mouse up.
-   * @param {Event} eventData the native mouse event
-   * @param {Transform} transformData properties of the current transform
-   * @param {Number} x x position of the cursor
-   * @param {Number} y y position of the cursor
-   * @return {Boolean} true if the action/event modified the object
+   * 控件鼠标释放事件处理器
+   * @param {Event} eventData 原生鼠标事件对象
+   * @param {Transform} transformData 当前变换操作的属性数据
+   * @param {Number} x 鼠标光标在画布中的X坐标
+   * @param {Number} y 鼠标光标在画布中的Y坐标
+   * @return {Boolean} 如果操作/事件修改了对象则返回true
    */
 
+  /**
+   * 判断控件是否应被激活（可交互）
+   * @param {string} controlKey 控件标识符
+   * @param {InteractiveFabricObject} fabricObject 关联的Fabric对象
+   * @param {Point} pointer 当前指针位置坐标
+   * @param {TCornerPoint} 控件包围盒的四个角坐标 {tl, tr, br, bl}
+   * @returns {Boolean} 当满足以下条件时返回true：
+   * 1. 当前对象是画布中的激活对象
+   * 2. 控件可见
+   * 3. 指针位置在控件包围多边形内
+   */
   shouldActivate(controlKey, fabricObject, pointer, _ref) {
-    var _fabricObject$canvas;
+    var _ref2, _fabricObject$canvas;
     let {
       tl,
       tr,
       br,
       bl
     } = _ref;
-    // TODO: locking logic can be handled here instead of in the control handler logic
-    return ((_fabricObject$canvas = fabricObject.canvas) === null || _fabricObject$canvas === void 0 ? void 0 : _fabricObject$canvas.getActiveObject()) === fabricObject && fabricObject.isControlVisible(controlKey) && Intersection.isPointInPolygon(pointer, [tl, tr, br, bl]);
+    // TODO: 锁定逻辑可以在这里处理，而不是在控件处理逻辑中
+    return ((_ref2 = ((_fabricObject$canvas = fabricObject.canvas) === null || _fabricObject$canvas === void 0 ? void 0 : _fabricObject$canvas.getActiveObjects()) || []) === null || _ref2 === void 0 ? void 0 : _ref2.find(item => item === fabricObject)) && fabricObject.isControlVisible(controlKey) && Intersection.isPointInPolygon(pointer, [tl, tr, br, bl]);
   }
 
   /**
@@ -11434,7 +11445,9 @@ class NoopLayoutManager extends LayoutManager {
 const groupDefaultValues = {
   strokeWidth: 0,
   subTargetCheck: false,
-  interactive: false
+  interactive: false,
+  padding: 10,
+  borderDashArray: [2, 2]
 };
 
 /**
@@ -13412,8 +13425,10 @@ class SelectableCanvas extends StaticCanvas$1 {
      */
     // event config
     /**
-     * Keep track of the subTargets for Mouse Events, ordered bottom up from innermost nested subTarget
-     * @type FabricObject[]
+     * 用于跟踪鼠标事件的子目标数组，从最内层的嵌套子目标开始，自底向上排序。
+     * 在鼠标事件处理过程中，用于存储所有可能的目标对象，包括嵌套对象。
+     * 例如：当鼠标悬停在一个组内的对象时，会记录该对象及其所有父组。
+     * @type {FabricObject[]}
      */
     _defineProperty(this, "targets", []);
     /**
@@ -13465,20 +13480,6 @@ class SelectableCanvas extends StaticCanvas$1 {
   }
   get wrapperEl() {
     return this.elements.container;
-  }
-  _addToActiveObjects(obj) {
-    if (!this._activeObjects.includes(obj)) {
-      this._activeObjects.push(obj);
-    }
-  }
-  _removeFromActiveObjects(obj) {
-    const index = this._activeObjects.indexOf(obj);
-    if (index > -1) {
-      this._activeObjects.splice(index, 1);
-    }
-  }
-  _clearActiveObjects() {
-    this._activeObjects.length = 0;
   }
   initElements(el) {
     this.elements = new CanvasDOMManager(el, {
@@ -13870,38 +13871,50 @@ class SelectableCanvas extends StaticCanvas$1 {
       // 如果跳过目标查找
       return undefined; // 返回未定义
     }
+
+    // activeObject = this._activeObject, // 获取当前活动对象
+    // aObjects = this.getActiveObjects(), // 获取所有活动对象
     const pointer = this.getViewportPoint(e),
       // 获取鼠标在视口中的位置
-      activeObject = this._activeObject,
-      // 获取当前活动对象
-      aObjects = this.getActiveObjects(); // 获取所有活动对象
-
+      activeObjects = this._activeObjects;
     this.targets = []; // 初始化目标数组
-    if (activeObject && aObjects.length >= 1) {
-      // 如果有活动对象且活动对象数量大于等于1
-      if (activeObject.findControl(pointer, isTouchEvent(e))) {
-        // 检查鼠标是否点击了活动对象的控制点
-        return activeObject; // 如果点击了控制点，返回活动对象
-      } else if (aObjects.length > 1 &&
-      // 检查鼠标指针是否在活动选择上，并可能执行 `subTargetCheck`
-      this.searchPossibleTargets([activeObject], pointer)) {
-        return activeObject; // 如果活动选择中有多个对象，返回活动对象
-      } else if (activeObject === this.searchPossibleTargets([activeObject], pointer)) {
-        // 如果活动对象不是活动选择
-        if (!this.preserveObjectStacking) {
-          return activeObject; // 如果不保留对象堆叠，返回活动对象
-        } else {
-          const subTargets = this.targets; // 保存当前目标
-          this.targets = []; // 清空目标数组
-          const target = this.searchPossibleTargets(this._objects, pointer); // 查找可能的目标
-          if (e[this.altSelectionKey] &&
-          // 如果按下了 alt 键
-          target && target !== activeObject) {
-            // alt 选择：即使活动对象不是最上面的目标，也选择活动对象
-            this.targets = subTargets; // 恢复目标
-            return activeObject; // 返回活动对象
-          }
-          return target; // 返回找到的目标
+    // if (activeObject && aObjects.length >= 1) { // 如果有活动对象且活动对象数量大于等于1
+    //   if (activeObject.findControl(pointer, isTouchEvent(e))) { // 检查鼠标是否点击了活动对象的控制点
+    //     return activeObject; // 如果点击了控制点，返回活动对象
+    //   } else if (
+    //     aObjects.length > 1 &&
+    //     // 检查鼠标指针是否在活动选择上，并可能执行 `subTargetCheck`
+    //     this.searchPossibleTargets([activeObject], pointer)
+    //   ) {
+    //     return activeObject; // 如果活动选择中有多个对象，返回活动对象
+    //   } else if (
+    //     activeObject === this.searchPossibleTargets([activeObject], pointer)
+    //   ) {
+    //     // 如果活动对象不是活动选择
+    //     if (!this.preserveObjectStacking) {
+    //       return activeObject; // 如果不保留对象堆叠，返回活动对象
+    //     } else {
+    //       const subTargets = this.targets; // 保存当前目标
+    //       this.targets = []; // 清空目标数组
+    //       const target = this.searchPossibleTargets(this._objects, pointer); // 查找可能的目标
+    //       if (
+    //         e[this.altSelectionKey as ModifierKey] && // 如果按下了 alt 键
+    //         target &&
+    //         target !== activeObject
+    //       ) {
+    //         // alt 选择：即使活动对象不是最上面的目标，也选择活动对象
+    //         this.targets = subTargets; // 恢复目标
+    //         return activeObject; // 返回活动对象
+    //       }
+    //       return target; // 返回找到的目标
+    //     }
+    //   }
+    // }
+    if (activeObjects && activeObjects.length > 0) {
+      for (let i = 0; i < activeObjects.length; i++) {
+        const obj = activeObjects[i];
+        if (obj.findControl(pointer, isTouchEvent(e))) {
+          return obj;
         }
       }
     }
@@ -13918,7 +13931,7 @@ class SelectableCanvas extends StaticCanvas$1 {
   _pointIsInObjectSelectionArea(obj, point) {
     // getCoords will already take care of group de-nesting
     let coords = obj.getCoords();
-    const isOlpShape = obj instanceof OlpShape;
+    const isOlpShape = obj.get('type') === 'OlpShape';
     if (isOlpShape) {
       // 通过textboxCoords计算obj.textbox相对于canvas的坐标
       const textboxCoords = obj.textbox.getCoords();
@@ -14192,8 +14205,13 @@ class SelectableCanvas extends StaticCanvas$1 {
    * @return {FabricObject[]} active objects array
    */
   getActiveObjects() {
-    const active = this._activeObject;
-    return isActiveSelection(active) ? active.getObjects() : active ? [active] : [];
+    // const active = this._activeObject;
+    // return isActiveSelection(active)
+    //   ? active.getObjects()
+    //   : active
+    //     ? [active]
+    //     : [];
+    return this._activeObjects || [];
   }
 
   /**
@@ -14449,7 +14467,6 @@ class SelectableCanvas extends StaticCanvas$1 {
    * @param {CanvasRenderingContext2D} ctx 要在其上渲染控制元素的上下文
    */
   drawControls(ctx) {
-    console.log(this._activeObjects);
     // const activeObject = this._activeObject; // 获取当前活动对象
 
     // if (activeObject) { // 如果存在活动对象
@@ -15390,7 +15407,7 @@ let Canvas$1 = class Canvas extends SelectableCanvas {
     this._cacheTransformEventData(e); // 缓存变换事件数据
     this._handleEvent(e, 'down:before'); // 触发事件前的处理
 
-    let target = this._target; // 获取当前目标对象
+    const target = this._target; // 获取当前目标对象
 
     // 如果是右键或中键点击，仅触发事件
     const {
@@ -15422,23 +15439,23 @@ let Canvas$1 = class Canvas extends SelectableCanvas {
     let shouldRender = this._shouldRender(target); // 检查是否需要渲染
     let grouped = false; // 标记是否分组
     const ctrlKey = e.ctrlKey; // 检查是否按下 Ctrl 键
-    console.log('target', target); // 输出当前目标
+    const shiftKey = e.shiftKey; // 检查是否按下 Shift 键
     const parentIsActive = target && target.parent && isCollection(target.parent) && ((_this$_activeObjects = this._activeObjects) === null || _this$_activeObjects === void 0 ? void 0 : _this$_activeObjects.includes(target.parent));
     if (target) {
       // 如果存在目标对象
-      if (ctrlKey) {
+      if (ctrlKey || shiftKey) {
+        var _this$_activeObjects2;
         // 如果按下 Ctrl 键
-        const activeObjects = this._activeObjects; // 获取活动对象数组
-
-        if (activeObjects) {
-          if (activeObjects.includes(target)) {
-            // 如果目标已在活动对象中
-            activeObjects.splice(activeObjects.indexOf(target), 1); // 从活动对象中移除
-          } else {
-            activeObjects.push(target); // 否则添加到活动对象中
-          }
-        } else {
-          this._activeObjects = [target]; // 如果没有活动对象，设置为当前目标
+        const isOnlyOneGroup = ((_this$_activeObjects2 = this._activeObjects) === null || _this$_activeObjects2 === void 0 ? void 0 : _this$_activeObjects2.filter(obj => {
+          return obj !== target.parent && !obj.parent;
+        }).length) === 0;
+        if (target.parent && parentIsActive && isOnlyOneGroup) {
+          this.checkboxActiveObjects(target);
+        } else if (!parentIsActive || !isOnlyOneGroup || !target.parent) {
+          var _this$_activeObjects3;
+          shouldRender = true;
+          this._activeObjects = (_this$_activeObjects3 = this._activeObjects) === null || _this$_activeObjects3 === void 0 ? void 0 : _this$_activeObjects3.filter(obj => !obj.parent);
+          this.checkboxActiveObjects(target.parent || target);
         }
       } else {
         if (target.parent) {
@@ -15456,7 +15473,7 @@ let Canvas$1 = class Canvas extends SelectableCanvas {
     }
     if (this.handleMultiSelection(e, target) || parentIsActive) {
       // 处理多选
-      target = this._activeObject; // 更新目标为当前活动对象
+      // target = this._activeObject; // 更新目标为当前活动对象
       grouped = true; // 标记为分组
       shouldRender = true; // 设置需要渲染
     } else if (this._shouldClearSelection(e, target)) {
@@ -15489,7 +15506,6 @@ let Canvas$1 = class Canvas extends SelectableCanvas {
       if (target === this._activeObject && (handle || !grouped)) {
         // 如果目标是当前活动对象且有控制点或未分组
         this._setupCurrentTransform(e, target, alreadySelected); // 设置当前变换
-        console.log(handle); // 输出控制点
         const control = handle ? handle.control : undefined,
           pointer = this.getScenePoint(e),
           // 获取鼠标在场景中的位置
@@ -15504,6 +15520,20 @@ let Canvas$1 = class Canvas extends SelectableCanvas {
     this._handleEvent(e, 'down'); // 触发鼠标按下事件
     // 必须渲染所有内容以更新视觉效果
     shouldRender && this.requestRenderAll(); // 请求重新渲染所有内容
+  }
+  checkboxActiveObjects(target) {
+    var _this$_activeObjects4;
+    if (!this._activeObjects) {
+      // 如果没有活动对象
+      this._activeObjects = [target]; // 设置当前目标为活动对象
+      return;
+    }
+    if ((_this$_activeObjects4 = this._activeObjects) !== null && _this$_activeObjects4 !== void 0 && _this$_activeObjects4.includes(target)) {
+      // 如果目标已在活动对象中
+      this._activeObjects.splice(this._activeObjects.indexOf(target), 1); // 从活动对象中移除
+    } else {
+      this._activeObjects.push(target); // 否则添加到活动对象中
+    }
   }
 
   /**
@@ -22271,7 +22301,6 @@ class ITextClickBehavior extends ITextKeyBehavior {
     _defineProperty(this, "draggableTextDelegate", void 0);
   }
   initBehavior() {
-    console.log('initBehavior');
     // Initializes event handlers related to cursor or selection
     this.on('mousedown', this._mouseDownHandler);
     this.on('mousedown:before', this._mouseDownHandlerBefore);
@@ -22372,7 +22401,6 @@ class ITextClickBehavior extends ITextKeyBehavior {
     let {
       e
     } = _ref;
-    console.log('mouseDownHandler');
     if (!this.canvas || !this.editable || notALeftClick(e) || this.getActiveControl()) {
       return;
     }
@@ -23296,7 +23324,6 @@ class Textbox extends IText {
       for (const p2 in obj[p1]) {
         const p2Number = parseInt(p2, 10);
         if (p2Number >= offset && (!shouldLimit || p2Number < nextOffset)) {
-          // eslint-disable-next-line no-unused-vars
           for (const p3 in obj[p1][p2]) {
             return false;
           }
@@ -23929,18 +23956,17 @@ class ActiveSelection extends Group {
    * @param {Object} [styleOverride] properties to override the object style
    * @param {Object} [childrenOverride] properties to override the children overrides
    */
-  _renderControls(ctx, styleOverride, childrenOverride) {
+  _renderControls(ctx, _styleOverride, childrenOverride) {
     ctx.save();
     ctx.globalAlpha = this.isMoving ? this.borderOpacityWhenMoving : 1;
     const options = _objectSpread2(_objectSpread2({
-      hasControls: false
+      hasControls: true
     }, childrenOverride), {}, {
       forActiveSelection: true
     });
     for (let i = 0; i < this._objects.length; i++) {
       this._objects[i]._renderControls(ctx, options);
     }
-    super._renderControls(ctx, styleOverride);
     ctx.restore();
   }
 }

@@ -71,6 +71,8 @@ export const groupDefaultValues: Partial<TClassProperties<Group>> = {
   strokeWidth: 0,
   subTargetCheck: false,
   interactive: false,
+  padding: 10,
+  borderDashArray: [2, 2]
 };
 
 /**

@@ -1003,7 +1003,7 @@ export class Canvas extends SelectableCanvas implements CanvasOptions {
     this._cacheTransformEventData(e); // 缓存变换事件数据
     this._handleEvent(e, 'down:before'); // 触发事件前的处理
 
-    let target: FabricObject | undefined = this._target; // 获取当前目标对象
+    const target: FabricObject | undefined = this._target; // 获取当前目标对象
 
     // 如果是右键或中键点击，仅触发事件
     const { button } = e as MouseEvent; // 获取鼠标按钮
@@ -1032,20 +1032,19 @@ export class Canvas extends SelectableCanvas implements CanvasOptions {
     let shouldRender = this._shouldRender(target); // 检查是否需要渲染
     let grouped = false; // 标记是否分组
     const ctrlKey = e.ctrlKey; // 检查是否按下 Ctrl 键
-    console.log('target', target); // 输出当前目标
+    const shiftKey = e.shiftKey; // 检查是否按下 Shift 键
     const parentIsActive = target && target.parent && isCollection(target.parent) && this._activeObjects?.includes(target.parent)
     if (target) { // 如果存在目标对象
-      if (ctrlKey) { // 如果按下 Ctrl 键
-        const activeObjects = this._activeObjects; // 获取活动对象数组
-
-        if (activeObjects) {
-          if (activeObjects.includes(target)) { // 如果目标已在活动对象中
-            activeObjects.splice(activeObjects.indexOf(target), 1); // 从活动对象中移除
-          } else {
-            activeObjects.push(target); // 否则添加到活动对象中
-          }
-        } else {
-          this._activeObjects = [target]; // 如果没有活动对象，设置为当前目标
+      if (ctrlKey || shiftKey) { // 如果按下 Ctrl 键
+        const isOnlyOneGroup = this._activeObjects?.filter((obj) => {
+          return obj !== target.parent && !obj.parent
+        }).length === 0
+        if (target.parent && parentIsActive && isOnlyOneGroup) {
+          this.checkboxActiveObjects(target)
+        } else if (!parentIsActive || !isOnlyOneGroup || !target.parent) {
+          shouldRender = true;
+          this._activeObjects = this._activeObjects?.filter((obj) => !obj.parent)
+          this.checkboxActiveObjects(target.parent || target)
         }
       } else {
         if (target.parent) {
@@ -1056,7 +1055,6 @@ export class Canvas extends SelectableCanvas implements CanvasOptions {
           }
         } else {
           this._activeObjects = [target]; // 否则将当前目标设置为活动对象
-
         }
       }
     } else {
@@ -1064,7 +1062,7 @@ export class Canvas extends SelectableCanvas implements CanvasOptions {
     }
 
     if (this.handleMultiSelection(e, target) || parentIsActive) { // 处理多选
-      target = this._activeObject; // 更新目标为当前活动对象
+      // target = this._activeObject; // 更新目标为当前活动对象
       grouped = true; // 标记为分组
       shouldRender = true; // 设置需要渲染
     } else if (this._shouldClearSelection(e, target)) { // 检查是否需要清除选择
@@ -1100,7 +1098,6 @@ export class Canvas extends SelectableCanvas implements CanvasOptions {
       );
       if (target === this._activeObject && (handle || !grouped)) { // 如果目标是当前活动对象且有控制点或未分组
         this._setupCurrentTransform(e, target, alreadySelected); // 设置当前变换
-        console.log(handle); // 输出控制点
         const control = handle ? handle.control : undefined,
           pointer = this.getScenePoint(e), // 获取鼠标在场景中的位置
           mouseDownHandler =
@@ -1122,6 +1119,18 @@ export class Canvas extends SelectableCanvas implements CanvasOptions {
     this._handleEvent(e, 'down'); // 触发鼠标按下事件
     // 必须渲染所有内容以更新视觉效果
     shouldRender && this.requestRenderAll(); // 请求重新渲染所有内容
+  }
+
+  checkboxActiveObjects(target: FabricObject) {
+    if (!this._activeObjects) { // 如果没有活动对象
+      this._activeObjects = [target]; // 设置当前目标为活动对象
+      return;
+    }
+    if (this._activeObjects?.includes(target)) { // 如果目标已在活动对象中
+      this._activeObjects.splice(this._activeObjects.indexOf(target), 1); // 从活动对象中移除
+    } else {
+      this._activeObjects.push(target); // 否则添加到活动对象中
+    }
   }
 
   /**

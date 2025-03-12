@@ -164,24 +164,35 @@ export class Control {
   declare mouseDownHandler?: ControlActionHandler;
 
   /**
-   * The control mouseUpHandler, provide one to handle an effect on mouse up.
-   * @param {Event} eventData the native mouse event
-   * @param {Transform} transformData properties of the current transform
-   * @param {Number} x x position of the cursor
-   * @param {Number} y y position of the cursor
-   * @return {Boolean} true if the action/event modified the object
+   * 控件鼠标释放事件处理器
+   * @param {Event} eventData 原生鼠标事件对象
+   * @param {Transform} transformData 当前变换操作的属性数据
+   * @param {Number} x 鼠标光标在画布中的X坐标
+   * @param {Number} y 鼠标光标在画布中的Y坐标
+   * @return {Boolean} 如果操作/事件修改了对象则返回true
    */
   declare mouseUpHandler?: ControlActionHandler;
 
+  /**
+   * 判断控件是否应被激活（可交互）
+   * @param {string} controlKey 控件标识符
+   * @param {InteractiveFabricObject} fabricObject 关联的Fabric对象
+   * @param {Point} pointer 当前指针位置坐标
+   * @param {TCornerPoint} 控件包围盒的四个角坐标 {tl, tr, br, bl}
+   * @returns {Boolean} 当满足以下条件时返回true：
+   * 1. 当前对象是画布中的激活对象
+   * 2. 控件可见
+   * 3. 指针位置在控件包围多边形内
+   */
   shouldActivate(
     controlKey: string,
     fabricObject: InteractiveFabricObject,
     pointer: Point,
     { tl, tr, br, bl }: TCornerPoint,
   ) {
-    // TODO: locking logic can be handled here instead of in the control handler logic
+    // TODO: 锁定逻辑可以在这里处理，而不是在控件处理逻辑中
     return (
-      fabricObject.canvas?.getActiveObject() === fabricObject &&
+      (fabricObject.canvas?.getActiveObjects() || [])?.find(item => item === fabricObject) &&
       fabricObject.isControlVisible(controlKey) &&
       Intersection.isPointInPolygon(pointer, [tl, tr, br, bl])
     );

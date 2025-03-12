@@ -51,7 +51,7 @@ import type { CanvasOptions } from './CanvasOptions';
 import { canvasDefaults } from './CanvasOptions';
 import { Intersection } from '../Intersection';
 import { isActiveSelection } from '../util/typeAssertions';
-import { OlpShape } from '../../fabric';
+import type { OlpShape } from '../shapes/Elements/OlpShape';
 
 /**
  * Canvas class
@@ -202,10 +202,13 @@ export class SelectableCanvas<EventSpec extends CanvasEvents = CanvasEvents>
   declare fireMiddleClick: boolean;
 
   /**
-   * Keep track of the subTargets for Mouse Events, ordered bottom up from innermost nested subTarget
-   * @type FabricObject[]
+   * 用于跟踪鼠标事件的子目标数组，从最内层的嵌套子目标开始，自底向上排序。
+   * 在鼠标事件处理过程中，用于存储所有可能的目标对象，包括嵌套对象。
+   * 例如：当鼠标悬停在一个组内的对象时，会记录该对象及其所有父组。
+   * @type {FabricObject[]}
    */
   targets: FabricObject[] = [];
+
 
   /**
    * Keep track of the hovered target
@@ -307,24 +310,7 @@ export class SelectableCanvas<EventSpec extends CanvasEvents = CanvasEvents>
   protected declare _isCurrentlyDrawing: boolean;
   declare freeDrawingBrush?: BaseBrush;
   declare _activeObject?: FabricObject;
-  declare _activeObjects: FabricObject[];
-
-  private _addToActiveObjects(obj: FabricObject) {
-    if (!this._activeObjects.includes(obj)) {
-      this._activeObjects.push(obj);
-    }
-  }
-
-  private _removeFromActiveObjects(obj: FabricObject) {
-    const index = this._activeObjects.indexOf(obj);
-    if (index > -1) {
-      this._activeObjects.splice(index, 1);
-    }
-  }
-
-  private _clearActiveObjects() {
-    this._activeObjects.length = 0;
-  }
+  declare _activeObjects?: FabricObject[];
 
   protected initElements(el?: string | HTMLCanvasElement) {
     this.elements = new CanvasDOMManager(el, {
@@ -732,40 +718,49 @@ export class SelectableCanvas<EventSpec extends CanvasEvents = CanvasEvents>
       return undefined; // 返回未定义
     }
 
+    // activeObject = this._activeObject, // 获取当前活动对象
+    // aObjects = this.getActiveObjects(), // 获取所有活动对象
     const pointer = this.getViewportPoint(e), // 获取鼠标在视口中的位置
-      activeObject = this._activeObject, // 获取当前活动对象
-      aObjects = this.getActiveObjects(); // 获取所有活动对象
+      activeObjects = this._activeObjects;
 
     this.targets = []; // 初始化目标数组
-    if (activeObject && aObjects.length >= 1) { // 如果有活动对象且活动对象数量大于等于1
-      if (activeObject.findControl(pointer, isTouchEvent(e))) { // 检查鼠标是否点击了活动对象的控制点
-        return activeObject; // 如果点击了控制点，返回活动对象
-      } else if (
-        aObjects.length > 1 &&
-        // 检查鼠标指针是否在活动选择上，并可能执行 `subTargetCheck`
-        this.searchPossibleTargets([activeObject], pointer)
-      ) {
-        return activeObject; // 如果活动选择中有多个对象，返回活动对象
-      } else if (
-        activeObject === this.searchPossibleTargets([activeObject], pointer)
-      ) {
-        // 如果活动对象不是活动选择
-        if (!this.preserveObjectStacking) {
-          return activeObject; // 如果不保留对象堆叠，返回活动对象
-        } else {
-          const subTargets = this.targets; // 保存当前目标
-          this.targets = []; // 清空目标数组
-          const target = this.searchPossibleTargets(this._objects, pointer); // 查找可能的目标
-          if (
-            e[this.altSelectionKey as ModifierKey] && // 如果按下了 alt 键
-            target &&
-            target !== activeObject
-          ) {
-            // alt 选择：即使活动对象不是最上面的目标，也选择活动对象
-            this.targets = subTargets; // 恢复目标
-            return activeObject; // 返回活动对象
-          }
-          return target; // 返回找到的目标
+    // if (activeObject && aObjects.length >= 1) { // 如果有活动对象且活动对象数量大于等于1
+    //   if (activeObject.findControl(pointer, isTouchEvent(e))) { // 检查鼠标是否点击了活动对象的控制点
+    //     return activeObject; // 如果点击了控制点，返回活动对象
+    //   } else if (
+    //     aObjects.length > 1 &&
+    //     // 检查鼠标指针是否在活动选择上，并可能执行 `subTargetCheck`
+    //     this.searchPossibleTargets([activeObject], pointer)
+    //   ) {
+    //     return activeObject; // 如果活动选择中有多个对象，返回活动对象
+    //   } else if (
+    //     activeObject === this.searchPossibleTargets([activeObject], pointer)
+    //   ) {
+    //     // 如果活动对象不是活动选择
+    //     if (!this.preserveObjectStacking) {
+    //       return activeObject; // 如果不保留对象堆叠，返回活动对象
+    //     } else {
+    //       const subTargets = this.targets; // 保存当前目标
+    //       this.targets = []; // 清空目标数组
+    //       const target = this.searchPossibleTargets(this._objects, pointer); // 查找可能的目标
+    //       if (
+    //         e[this.altSelectionKey as ModifierKey] && // 如果按下了 alt 键
+    //         target &&
+    //         target !== activeObject
+    //       ) {
+    //         // alt 选择：即使活动对象不是最上面的目标，也选择活动对象
+    //         this.targets = subTargets; // 恢复目标
+    //         return activeObject; // 返回活动对象
+    //       }
+    //       return target; // 返回找到的目标
+    //     }
+    //   }
+    // }
+    if (activeObjects && activeObjects.length > 0) {
+      for (let i = 0; i < activeObjects.length; i++) {
+        const obj = activeObjects[i];
+        if (obj.findControl(pointer, isTouchEvent(e))) {
+          return obj;
         }
       }
     }
@@ -783,10 +778,11 @@ export class SelectableCanvas<EventSpec extends CanvasEvents = CanvasEvents>
   private _pointIsInObjectSelectionArea(obj: FabricObject, point: Point) {
     // getCoords will already take care of group de-nesting
     let coords = obj.getCoords();
-    const isOlpShape = obj instanceof OlpShape;
+
+    const isOlpShape = obj.get('type') === 'OlpShape'
     if (isOlpShape) {
       // 通过textboxCoords计算obj.textbox相对于canvas的坐标
-      const textboxCoords = obj.textbox.getCoords();
+      const textboxCoords = (obj as OlpShape).textbox.getCoords();
 
       // 获取obj的变换矩阵
       const objMatrix = obj.calcTransformMatrix();
@@ -1091,12 +1087,13 @@ export class SelectableCanvas<EventSpec extends CanvasEvents = CanvasEvents>
    * @return {FabricObject[]} active objects array
    */
   getActiveObjects(): FabricObject[] {
-    const active = this._activeObject;
-    return isActiveSelection(active)
-      ? active.getObjects()
-      : active
-        ? [active]
-        : [];
+    // const active = this._activeObject;
+    // return isActiveSelection(active)
+    //   ? active.getObjects()
+    //   : active
+    //     ? [active]
+    //     : [];
+    return this._activeObjects || [];
   }
 
   /**
@@ -1364,7 +1361,6 @@ export class SelectableCanvas<EventSpec extends CanvasEvents = CanvasEvents>
    * @param {CanvasRenderingContext2D} ctx 要在其上渲染控制元素的上下文
    */
   drawControls(ctx: CanvasRenderingContext2D) {
-    console.log(this._activeObjects)
     // const activeObject = this._activeObject; // 获取当前活动对象
 
     // if (activeObject) { // 如果存在活动对象

@@ -28,7 +28,6 @@ export abstract class ITextClickBehavior<
   protected draggableTextDelegate: DraggableTextDelegate;
 
   initBehavior() {
-    console.log('initBehavior')
     // Initializes event handlers related to cursor or selection
     this.on('mousedown', this._mouseDownHandler);
     this.on('mousedown:before', this._mouseDownHandlerBefore);
@@ -136,7 +135,6 @@ export abstract class ITextClickBehavior<
    * current compositionMode. It will be set to false.
    */
   _mouseDownHandler({ e }: TPointerEventInfo) {
-    console.log('mouseDownHandler')
     if (
       !this.canvas ||
       !this.editable ||

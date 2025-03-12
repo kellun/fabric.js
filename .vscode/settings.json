@@ -32,5 +32,10 @@
   "search.useIgnoreFiles": true,
   "[typescript]": {
     "editor.defaultFormatter": "vscode.typescript-language-features"
-  }
+  },
+  "marscode.codeCompletionPro": {
+    "enableCodeCompletionPro": true
+  },
+  "marscode.enableInlineCommand": true,
+  "marscode.chatLanguage": "cn"
 }
