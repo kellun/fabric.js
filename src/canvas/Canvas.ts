@@ -781,85 +781,121 @@ export class Canvas extends SelectableCanvas implements CanvasOptions {
   }
 
   /**
-   * Method that defines the actions when mouse is released on canvas.
-   * The method resets the currentTransform parameters, store the image corner
-   * position in the image object and render the canvas on top.
-   * @private
-   * @param {Event} e Event object fired on mouseup
+   * 处理鼠标抬起事件的方法。
+   * 该方法会根据当前的画布状态和鼠标事件执行不同的操作，
+   * 例如完成当前变换、处理选择操作、调用控件的鼠标抬起处理程序等，
+   * 最后根据情况渲染画布。
+   *
+   * @param {TPointerEvent} e - 触发的鼠标抬起事件对象。
    */
   __onMouseUp(e: TPointerEvent) {
+    // 缓存事件处理过程中所需的常见信息
     this._cacheTransformEventData(e);
+    // 触发 'up:before' 事件
     this._handleEvent(e, 'up:before');
 
+    // 获取当前的变换对象
     const transform = this._currentTransform;
+    // 判断是否为点击操作
     const isClick = this._isClick;
+    // 获取当前的目标对象
     const target = this._target;
 
-    // if right/middle click just fire events and return
-    // target undefined will make the _handleEvent search the target
+    // 如果是右键或中键点击，仅触发事件并返回
+    // 若 target 为 undefined，_handleEvent 会自动查找目标对象
     const { button } = e as MouseEvent;
     if (button) {
+      // 如果启用了中键点击事件且按下的是中键，或者启用了右键点击事件且按下的是右键
       ((this.fireMiddleClick && button === 1) ||
         (this.fireRightClick && button === 2)) &&
+        // 触发 'up' 事件
         this._handleEvent(e, 'up');
+      // 重置事件处理过程中缓存的变换数据
       this._resetTransformEventData();
       return;
     }
 
+    // 如果处于绘图模式且正在绘图
     if (this.isDrawingMode && this._isCurrentlyDrawing) {
+      // 调用绘图模式下的鼠标抬起处理方法
       this._onMouseUpInDrawingMode(e);
       return;
     }
 
+    // 如果当前事件不是主事件，则不进行后续处理
     if (!this._isMainEvent(e)) {
       return;
     }
+    // 标记是否需要渲染画布
     let shouldRender = false;
+    // 如果存在变换操作
     if (transform) {
+      // 完成当前的变换操作
       this._finalizeCurrentTransform(e);
+      // 根据变换操作是否执行来决定是否需要渲染画布
       shouldRender = transform.actionPerformed;
     }
+    // 如果不是点击操作
     if (!isClick) {
+      // 标记目标对象之前是否为活动对象
       const targetWasActive = target === this._activeObject;
+      // 处理选择操作
       this.handleSelection(e);
+      // 如果之前不需要渲染画布
       if (!shouldRender) {
+        // 根据目标对象的状态和选择情况决定是否需要渲染画布
         shouldRender =
           this._shouldRender(target) ||
           (!targetWasActive && target === this._activeObject);
       }
     }
+    // 定义指针和角点变量
     let pointer, corner;
+    // 如果存在目标对象
     if (target) {
+      // 在目标对象上查找当前鼠标位置对应的控件
       const found = target.findControl(
         this.getViewportPoint(e),
         isTouchEvent(e),
       );
+      // 解构获取控件的键和控件对象
       const { key, control } = found || {};
+      // 记录角点信息
       corner = key;
+      // 如果目标对象可选择，不是当前活动对象，且激活条件为鼠标抬起
       if (
         target.selectable &&
         target !== this._activeObject &&
         target.activeOn === 'up'
       ) {
+        // 设置目标对象为活动对象
         this.setActiveObject(target, e);
+        // 标记需要渲染画布
         shouldRender = true;
-      } else if (control) {
+      }
+      // 如果找到对应的控件
+      else if (control) {
+        // 获取控件的鼠标抬起处理程序
         const mouseUpHandler = control.getMouseUpHandler(e, target, control);
         if (mouseUpHandler) {
+          // 获取鼠标在场景中的位置
           pointer = this.getScenePoint(e);
+          // 调用鼠标抬起处理程序
           mouseUpHandler.call(control, e, transform!, pointer.x, pointer.y);
         }
       }
+      // 标记目标对象停止移动
       target.isMoving = false;
     }
-    // if we are ending up a transform on a different control or a new object
-    // fire the original mouse up from the corner that started the transform
+    // 如果结束变换时，目标对象或角点发生了变化
     if (
       transform &&
       (transform.target !== target || transform.corner !== corner)
     ) {
+      // 获取原始变换的控件对象
       const originalControl =
         transform.target && transform.target.controls[transform.corner],
+        // 获取原始控件的鼠标抬起处理程序
         originalMouseUpHandler =
           originalControl &&
           originalControl.getMouseUpHandler(
@@ -867,7 +903,9 @@ export class Canvas extends SelectableCanvas implements CanvasOptions {
             transform.target,
             originalControl,
           );
+      // 获取鼠标在场景中的位置
       pointer = pointer || this.getScenePoint(e);
+      // 如果存在原始鼠标抬起处理程序，则调用该程序
       originalMouseUpHandler &&
         originalMouseUpHandler.call(
           originalControl,
@@ -877,15 +915,24 @@ export class Canvas extends SelectableCanvas implements CanvasOptions {
           pointer.y,
         );
     }
+    // 根据鼠标事件和目标对象设置光标样式
     this._setCursorFromEvent(e, target);
+    // 触发 'up' 事件
     this._handleEvent(e, 'up');
+    // 清空多选框选择器
     this._groupSelector = null;
+    // 清空当前的变换对象
     this._currentTransform = null;
-    // reset the target information about which corner is selected
+    // 重置目标对象的角点选择信息
     target && (target.__corner = undefined);
+    // 如果需要渲染画布
     if (shouldRender) {
+      // 请求渲染整个画布
       this.requestRenderAll();
-    } else if (!isClick && !(this._activeObject as IText)?.isEditing) {
+    }
+    // 如果不是点击操作，且活动对象不是正在编辑的文本对象
+    else if (!isClick && !(this._activeObject as IText)?.isEditing) {
+      // 仅渲染顶部画布
       this.renderTop();
     }
   }
