@@ -72,7 +72,8 @@ export const groupDefaultValues: Partial<TClassProperties<Group>> = {
   subTargetCheck: false,
   interactive: false,
   padding: 10,
-  borderDashArray: [2, 2]
+  borderDashArray: [2, 2],
+  hoverCursor: 'default'
 };
 
 /**
