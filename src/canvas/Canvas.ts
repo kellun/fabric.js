@@ -1143,7 +1143,7 @@ export class Canvas extends SelectableCanvas implements CanvasOptions {
         this.getViewportPoint(e),
         isTouchEvent(e),
       );
-      if (target === this._activeObject && (handle || !grouped)) { // 如果目标是当前活动对象且有控制点或未分组
+      if (this._activeObjects?.includes(target)) { // 如果目标是当前活动对象且有控制点或未分组
         this._setupCurrentTransform(e, target, alreadySelected); // 设置当前变换
         const control = handle ? handle.control : undefined,
           pointer = this.getScenePoint(e), // 获取鼠标在场景中的位置
