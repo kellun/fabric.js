@@ -51,13 +51,13 @@ import { getDevicePixelRatio } from '../env';
  */
 export type TCanvasSizeOptions =
   | {
-      backstoreOnly?: true;
-      cssOnly?: false;
-    }
+    backstoreOnly?: true;
+    cssOnly?: false;
+  }
   | {
-      backstoreOnly?: false;
-      cssOnly?: true;
-    };
+    backstoreOnly?: false;
+    cssOnly?: true;
+  };
 
 export type TSVGExportOptions = {
   suppressPreamble?: boolean;
@@ -84,12 +84,11 @@ export type TSVGExportOptions = {
  */
 // TODO: fix `EventSpec` inheritance https://github.com/microsoft/TypeScript/issues/26154#issuecomment-1366616260
 export class StaticCanvas<
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    EventSpec extends StaticCanvasEvents = StaticCanvasEvents,
-  >
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  EventSpec extends StaticCanvasEvents = StaticCanvasEvents,
+>
   extends createCollectionMixin(CommonMethods<CanvasEvents>)
-  implements StaticCanvasOptions
-{
+  implements StaticCanvasOptions {
   declare width: number;
   declare height: number;
 
@@ -230,7 +229,7 @@ export class StaticCanvas<
       log(
         'warn',
         'Canvas is trying to add an object that belongs to a different canvas.\n' +
-          'Resulting to default behavior: removing object from previous canvas and adding to new canvas',
+        'Resulting to default behavior: removing object from previous canvas and adding to new canvas',
       );
       obj.canvas.remove(obj);
     }
@@ -555,51 +554,51 @@ export class StaticCanvas<
   }
 
   /**
-   * Renders background, objects, overlay and controls.
-   * @param {CanvasRenderingContext2D} ctx
-   * @param {Array} objects to render
+   * 渲染背景、对象、覆盖层和控制元素。
+   * @param {CanvasRenderingContext2D} ctx 渲染上下文
+   * @param {Array} objects 要渲染的对象
    */
   renderCanvas(ctx: CanvasRenderingContext2D, objects: FabricObject[]) {
-    if (this.destroyed) {
-      return;
+    if (this.destroyed) { // 检查画布是否已被销毁
+      return; // 如果已销毁，直接返回
     }
 
-    const v = this.viewportTransform,
-      path = this.clipPath;
-    this.calcViewportBoundaries();
-    this.clearContext(ctx);
-    ctx.imageSmoothingEnabled = this.imageSmoothingEnabled;
+    const v = this.viewportTransform, // 获取视口变换
+      path = this.clipPath; // 获取剪切路径
+    this.calcViewportBoundaries(); // 计算视口边界
+    this.clearContext(ctx); // 清空渲染上下文
+    ctx.imageSmoothingEnabled = this.imageSmoothingEnabled; // 设置图像平滑
     // @ts-expect-error node-canvas stuff
-    ctx.patternQuality = 'best';
-    this.fire('before:render', { ctx });
-    this._renderBackground(ctx);
+    ctx.patternQuality = 'best'; // 设置图案质量为最佳
+    this.fire('before:render', { ctx }); // 触发渲染前事件
+    this._renderBackground(ctx); // 渲染背景
 
-    ctx.save();
-    //apply viewport transform once for all rendering process
-    ctx.transform(v[0], v[1], v[2], v[3], v[4], v[5]);
-    this._renderObjects(ctx, objects);
-    ctx.restore();
-    if (!this.controlsAboveOverlay && !this.skipControlsDrawing) {
-      this.drawControls(ctx);
+    ctx.save(); // 保存当前上下文状态
+    // 应用视口变换，进行所有渲染过程
+    ctx.transform(v[0], v[1], v[2], v[3], v[4], v[5]); // 应用视口变换
+    this._renderObjects(ctx, objects); // 渲染对象
+    ctx.restore(); // 恢复上下文状态
+    if (!this.controlsAboveOverlay && !this.skipControlsDrawing) { // 检查是否需要绘制控制元素
+      this.drawControls(ctx); // 绘制控制元素
     }
-    if (path) {
-      path._set('canvas', this);
-      // needed to setup a couple of variables
-      // todo migrate to the newer one
-      path.shouldCache();
-      path._transformDone = true;
-      (path as TCachedFabricObject).renderCache({ forClipping: true });
-      this.drawClipPathOnCanvas(ctx, path as TCachedFabricObject);
+    if (path) { // 如果存在剪切路径
+      path._set('canvas', this); // 设置路径的画布属性
+      // 需要设置几个变量
+      // todo: 迁移到更新的版本
+      path.shouldCache(); // 检查路径是否需要缓存
+      path._transformDone = true; // 标记变换已完成
+      (path as TCachedFabricObject).renderCache({ forClipping: true }); // 渲染缓存
+      this.drawClipPathOnCanvas(ctx, path as TCachedFabricObject); // 在画布上绘制剪切路径
     }
-    this._renderOverlay(ctx);
-    if (this.controlsAboveOverlay && !this.skipControlsDrawing) {
-      this.drawControls(ctx);
+    this._renderOverlay(ctx); // 渲染覆盖层
+    if (this.controlsAboveOverlay && !this.skipControlsDrawing) { // 检查是否需要绘制控制元素
+      this.drawControls(ctx); // 绘制控制元素
     }
-    this.fire('after:render', { ctx });
+    this.fire('after:render', { ctx }); // 触发渲染后事件
 
-    if (this.__cleanupTask) {
-      this.__cleanupTask();
-      this.__cleanupTask = undefined;
+    if (this.__cleanupTask) { // 检查是否有清理任务
+      this.__cleanupTask(); // 执行清理任务
+      this.__cleanupTask = undefined; // 清除清理任务
     }
   }
 
@@ -1222,18 +1221,14 @@ export class StaticCanvas<
           ? matrixToSVG(invertTransform(this.viewportTransform))
           : '';
       markup.push(
-        `<rect transform="${additionalTransform} translate(${finalWidth / 2},${
-          finalHeight / 2
-        })" x="${filler.offsetX - finalWidth / 2}" y="${
-          filler.offsetY - finalHeight / 2
-        }" width="${
-          (repeat === 'repeat-y' || repeat === 'no-repeat') && isPattern(filler)
-            ? (filler.source as HTMLImageElement).width
-            : finalWidth
-        }" height="${
-          (repeat === 'repeat-x' || repeat === 'no-repeat') && isPattern(filler)
-            ? (filler.source as HTMLImageElement).height
-            : finalHeight
+        `<rect transform="${additionalTransform} translate(${finalWidth / 2},${finalHeight / 2
+        })" x="${filler.offsetX - finalWidth / 2}" y="${filler.offsetY - finalHeight / 2
+        }" width="${(repeat === 'repeat-y' || repeat === 'no-repeat') && isPattern(filler)
+          ? (filler.source as HTMLImageElement).width
+          : finalWidth
+        }" height="${(repeat === 'repeat-x' || repeat === 'no-repeat') && isPattern(filler)
+          ? (filler.source as HTMLImageElement).height
+          : finalHeight
         }" fill="url(#SVGID_${filler.id})"></rect>\n`,
       );
     } else {
@@ -1528,8 +1523,7 @@ export class StaticCanvas<
    * @return {String} string representation of an instance
    */
   toString() {
-    return `#<Canvas (${this.complexity()}): { objects: ${
-      this._objects.length
-    } }>`;
+    return `#<Canvas (${this.complexity()}): { objects: ${this._objects.length
+      } }>`;
   }
 }

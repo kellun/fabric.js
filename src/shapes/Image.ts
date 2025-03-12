@@ -67,7 +67,7 @@ export interface SerializedImageProps extends SerializedObjectProps {
   cropY: number;
 }
 
-export interface ImageProps extends FabricObjectProps, UniqueImageProps {}
+export interface ImageProps extends FabricObjectProps, UniqueImageProps { }
 
 const IMAGE_PROPS = ['cropX', 'cropY'] as const;
 
@@ -75,13 +75,12 @@ const IMAGE_PROPS = ['cropX', 'cropY'] as const;
  * @tutorial {@link http://fabricjs.com/fabric-intro-part-1#images}
  */
 export class FabricImage<
-    Props extends TOptions<ImageProps> = Partial<ImageProps>,
-    SProps extends SerializedImageProps = SerializedImageProps,
-    EventSpec extends ObjectEvents = ObjectEvents,
-  >
+  Props extends TOptions<ImageProps> = Partial<ImageProps>,
+  SProps extends SerializedImageProps = SerializedImageProps,
+  EventSpec extends ObjectEvents = ObjectEvents,
+>
   extends FabricObject<Props, SProps, EventSpec>
-  implements ImageProps
-{
+  implements ImageProps {
   /**
    * When calling {@link FabricImage.getSrc}, return value from element src with `element.getAttribute('src')`.
    * This allows for relative urls as image src.
@@ -205,9 +204,9 @@ export class FabricImage<
     this.setElement(
       typeof arg0 === 'string'
         ? ((
-            (this.canvas && getDocumentFromElement(this.canvas.getElement())) ||
-            getFabricDocument()
-          ).getElementById(arg0) as ImageSource)
+          (this.canvas && getDocumentFromElement(this.canvas.getElement())) ||
+          getFabricDocument()
+        ).getElementById(arg0) as ImageSource)
         : arg0,
       options,
     );
@@ -379,14 +378,14 @@ export class FabricImage<
       svgString.push(
         '<clipPath id="imageCrop_' + clipPathId + '">\n',
         '\t<rect x="' +
-          x +
-          '" y="' +
-          y +
-          '" width="' +
-          this.width +
-          '" height="' +
-          this.height +
-          '" />\n',
+        x +
+        '" y="' +
+        y +
+        '" width="' +
+        this.width +
+        '" height="' +
+        this.height +
+        '" />\n',
         '</clipPath>\n',
       );
       clipPath = ' clip-path="url(#imageCrop_' + clipPathId + ')" ';
@@ -397,15 +396,12 @@ export class FabricImage<
     imageMarkup.push(
       '\t<image ',
       'COMMON_PARTS',
-      `xlink:href="${this.getSvgSrc(true)}" x="${x - this.cropX}" y="${
-        y - this.cropY
-        // we're essentially moving origin of transformation from top/left corner to the center of the shape
-        // by wrapping it in container <g> element with actual transformation, then offsetting object to the top/left
-        // so that object's center aligns with container's left/top
-      }" width="${
-        element.width || (element as HTMLImageElement).naturalWidth
-      }" height="${
-        element.height || (element as HTMLImageElement).naturalHeight
+      `xlink:href="${this.getSvgSrc(true)}" x="${x - this.cropX}" y="${y - this.cropY
+      // we're essentially moving origin of transformation from top/left corner to the center of the shape
+      // by wrapping it in container <g> element with actual transformation, then offsetting object to the top/left
+      // so that object's center aligns with container's left/top
+      }" width="${element.width || (element as HTMLImageElement).naturalWidth
+      }" height="${element.height || (element as HTMLImageElement).naturalHeight
       }"${imageRendering}${clipPath}></image>\n`,
     );
 
@@ -413,8 +409,7 @@ export class FabricImage<
       const origFill = this.fill;
       this.fill = null;
       strokeSvg = [
-        `\t<rect x="${x}" y="${y}" width="${this.width}" height="${
-          this.height
+        `\t<rect x="${x}" y="${y}" width="${this.width}" height="${this.height
         }" style="${this.getSvgStyles()}" />\n`,
       ];
       this.fill = origFill;
@@ -690,8 +685,8 @@ export class FabricImage<
    */
   parsePreserveAspectRatioAttribute() {
     const pAR = parsePreserveAspectRatioAttribute(
-        this.preserveAspectRatio || '',
-      ),
+      this.preserveAspectRatio || '',
+    ),
       pWidth = this.width,
       pHeight = this.height,
       parsedAttributes = { width: pWidth, height: pHeight };
@@ -803,7 +798,7 @@ export class FabricImage<
       // TODO: redundant - handled by enlivenObjectEnlivables
       rf && enlivenObjects<BaseFilter<'Resize'>>([rf], options),
       enlivenObjectEnlivables(object, options),
-    ]).then(([el, filters = [], [resizeFilter] = [], hydratedProps = {}]) => {
+    ]).then(([el, filters = [], [resizeFilter = undefined] = [[]], hydratedProps = {}]) => {
       return new this(el, {
         ...object,
         // TODO: this creates a difference between image creation and restoring from JSON

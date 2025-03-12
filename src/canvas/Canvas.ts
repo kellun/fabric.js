@@ -1,4 +1,5 @@
 import { classRegistry } from '../ClassRegistry';
+import { isCollection } from '../Collection';
 import { NONE } from '../constants';
 import type {
   CanvasEvents,
@@ -991,60 +992,87 @@ export class Canvas extends SelectableCanvas implements CanvasOptions {
   }
 
   /**
-   * Method that defines the actions when mouse is clicked on canvas.
-   * The method inits the currentTransform parameters and renders all the
-   * canvas so the current image can be placed on the top canvas and the rest
-   * in on the container one.
+   * 定义鼠标点击画布时的操作。
+   * 该方法初始化当前变换参数并渲染整个画布，
+   * 以便当前图像可以放置在顶部画布上，其余部分在容器画布上。
    * @private
-   * @param {Event} e Event object fired on mousedown
+   * @param {Event} e 触发的鼠标按下事件对象
    */
   __onMouseDown(e: TPointerEvent) {
-    this._isClick = true;
-    this._cacheTransformEventData(e);
-    this._handleEvent(e, 'down:before');
+    this._isClick = true; // 标记为点击事件
+    this._cacheTransformEventData(e); // 缓存变换事件数据
+    this._handleEvent(e, 'down:before'); // 触发事件前的处理
 
-    let target: FabricObject | undefined = this._target;
+    let target: FabricObject | undefined = this._target; // 获取当前目标对象
 
-    // if right/middle click just fire events
-    const { button } = e as MouseEvent;
+    // 如果是右键或中键点击，仅触发事件
+    const { button } = e as MouseEvent; // 获取鼠标按钮
     if (button) {
-      ((this.fireMiddleClick && button === 1) ||
-        (this.fireRightClick && button === 2)) &&
-        this._handleEvent(e, 'down');
-      this._resetTransformEventData();
-      return;
+      ((this.fireMiddleClick && button === 1) || // 如果是中键点击
+        (this.fireRightClick && button === 2)) && // 如果是右键点击
+        this._handleEvent(e, 'down'); // 触发相应事件
+      this._resetTransformEventData(); // 重置变换事件数据
+      return; // 结束方法
     }
 
-    if (this.isDrawingMode) {
-      this._onMouseDownInDrawingMode(e);
-      return;
+    if (this.isDrawingMode) { // 如果处于绘图模式
+      this._onMouseDownInDrawingMode(e); // 处理绘图模式下的鼠标按下事件
+      return; // 结束方法
     }
 
-    if (!this._isMainEvent(e)) {
-      return;
+    if (!this._isMainEvent(e)) { // 检查是否为主要事件
+      return; // 结束方法
     }
 
-    // ignore if some object is being transformed at this moment
+    // 忽略当前正在变换的对象
     if (this._currentTransform) {
-      return;
+      return; // 结束方法
     }
 
-    let shouldRender = this._shouldRender(target);
-    let grouped = false;
-    if (this.handleMultiSelection(e, target)) {
-      // active object might have changed while grouping
-      target = this._activeObject;
-      grouped = true;
-      shouldRender = true;
-    } else if (this._shouldClearSelection(e, target)) {
-      this.discardActiveObject(e);
+    let shouldRender = this._shouldRender(target); // 检查是否需要渲染
+    let grouped = false; // 标记是否分组
+    const ctrlKey = e.ctrlKey; // 检查是否按下 Ctrl 键
+    console.log('target', target); // 输出当前目标
+    const parentIsActive = target && target.parent && isCollection(target.parent) && this._activeObjects?.includes(target.parent)
+    if (target) { // 如果存在目标对象
+      if (ctrlKey) { // 如果按下 Ctrl 键
+        const activeObjects = this._activeObjects; // 获取活动对象数组
+
+        if (activeObjects) {
+          if (activeObjects.includes(target)) { // 如果目标已在活动对象中
+            activeObjects.splice(activeObjects.indexOf(target), 1); // 从活动对象中移除
+          } else {
+            activeObjects.push(target); // 否则添加到活动对象中
+          }
+        } else {
+          this._activeObjects = [target]; // 如果没有活动对象，设置为当前目标
+        }
+      } else {
+        if (target.parent) {
+          if (parentIsActive) {
+            this._activeObjects = [target.parent, target]
+          } else {
+            this._activeObjects = [target.parent]
+          }
+        } else {
+          this._activeObjects = [target]; // 否则将当前目标设置为活动对象
+
+        }
+      }
+    } else {
+      this._activeObjects = []; // 如果没有目标，清空活动对象
     }
-    // we start a group selector rectangle if
-    // selection is enabled
-    // and there is no target, or the following 3 conditions are satisfied:
-    // target is not selectable ( otherwise we selected it )
-    // target is not editing
-    // target is not already selected ( otherwise we drag )
+
+    if (this.handleMultiSelection(e, target) || parentIsActive) { // 处理多选
+      target = this._activeObject; // 更新目标为当前活动对象
+      grouped = true; // 标记为分组
+      shouldRender = true; // 设置需要渲染
+    } else if (this._shouldClearSelection(e, target)) { // 检查是否需要清除选择
+      this.discardActiveObject(e); // 清除活动对象
+    }
+
+    // 如果启用了选择并且没有目标，或者满足以下条件：
+    // 目标不可选择、目标未编辑、目标未被选中，则开始绘制选择框
     if (
       this.selection &&
       (!target ||
@@ -1052,8 +1080,8 @@ export class Canvas extends SelectableCanvas implements CanvasOptions {
           !(target as IText).isEditing &&
           target !== this._activeObject))
     ) {
-      const p = this.getScenePoint(e);
-      this._groupSelector = {
+      const p = this.getScenePoint(e); // 获取鼠标在场景中的位置
+      this._groupSelector = { // 设置选择框
         x: p.x,
         y: p.y,
         deltaY: 0,
@@ -1061,21 +1089,22 @@ export class Canvas extends SelectableCanvas implements CanvasOptions {
       };
     }
 
-    if (target) {
-      const alreadySelected = target === this._activeObject;
-      if (target.selectable && target.activeOn === 'down') {
-        this.setActiveObject(target, e);
+    if (target) { // 如果存在目标对象
+      const alreadySelected = target === this._activeObject; // 检查目标是否已被选中
+      if (target.selectable && target.activeOn === 'down') { // 如果目标可选择并在按下时激活
+        this.setActiveObject(target, e); // 设置当前活动对象
       }
-      const handle = target.findControl(
+      const handle = target.findControl( // 查找控制点
         this.getViewportPoint(e),
         isTouchEvent(e),
       );
-      if (target === this._activeObject && (handle || !grouped)) {
-        this._setupCurrentTransform(e, target, alreadySelected);
+      if (target === this._activeObject && (handle || !grouped)) { // 如果目标是当前活动对象且有控制点或未分组
+        this._setupCurrentTransform(e, target, alreadySelected); // 设置当前变换
+        console.log(handle); // 输出控制点
         const control = handle ? handle.control : undefined,
-          pointer = this.getScenePoint(e),
+          pointer = this.getScenePoint(e), // 获取鼠标在场景中的位置
           mouseDownHandler =
-            control && control.getMouseDownHandler(e, target, control);
+            control && control.getMouseDownHandler(e, target, control); // 获取鼠标按下处理函数
         mouseDownHandler &&
           mouseDownHandler.call(
             control,
@@ -1083,15 +1112,16 @@ export class Canvas extends SelectableCanvas implements CanvasOptions {
             this._currentTransform!,
             pointer.x,
             pointer.y,
-          );
+          ); // 调用鼠标按下处理函数
       }
     }
-    //  we clear `_objectsToRender` in case of a change in order to repopulate it at rendering
-    //  run before firing the `down` event to give the dev a chance to populate it themselves
+
+    // 清空 `_objectsToRender` 以便在渲染时重新填充
+    // 在触发 `down` 事件之前运行，以便开发者有机会自己填充
     shouldRender && (this._objectsToRender = undefined);
-    this._handleEvent(e, 'down');
-    // we must renderAll so that we update the visuals
-    shouldRender && this.requestRenderAll();
+    this._handleEvent(e, 'down'); // 触发鼠标按下事件
+    // 必须渲染所有内容以更新视觉效果
+    shouldRender && this.requestRenderAll(); // 请求重新渲染所有内容
   }
 
   /**
@@ -1103,22 +1133,22 @@ export class Canvas extends SelectableCanvas implements CanvasOptions {
   }
 
   /**
-   * Cache common information needed during event processing
-   * @private
-   * @param {Event} e Event object fired on event
-   */
+  * 缓存事件处理过程中所需的常见信息
+  * @private
+  * @param {Event} e 触发事件的事件对象
+  */
   _cacheTransformEventData(e: TPointerEvent) {
-    // reset in order to avoid stale caching
-    this._resetTransformEventData();
-    this._pointer = this.getViewportPoint(e);
-    this._absolutePointer = sendPointToPlane(
+    // 重置以避免过时的缓存
+    this._resetTransformEventData(); // 调用重置方法清空之前的缓存数据
+    this._pointer = this.getViewportPoint(e); // 获取鼠标在视口中的位置并缓存
+    this._absolutePointer = sendPointToPlane( // 将视口坐标转换为绝对坐标
       this._pointer,
       undefined,
-      this.viewportTransform,
+      this.viewportTransform, // 使用当前的视口变换
     );
-    this._target = this._currentTransform
+    this._target = this._currentTransform // 如果当前有变换，获取目标对象
       ? this._currentTransform.target
-      : this.findTarget(e);
+      : this.findTarget(e); // 否则查找当前事件的目标对象
   }
 
   /**
@@ -1375,99 +1405,96 @@ export class Canvas extends SelectableCanvas implements CanvasOptions {
   }
 
   /**
-   * ## Handles multiple selection
-   * - toggles `target` selection (selects/deselects `target` if it isn't/is selected respectively)
-   * - sets the active object in case it is not set or in case there is a single active object left under active selection.
+   * ## 处理多选
+   * - 切换 `target` 的选择状态（如果未选中则选中，如果已选中则取消选中）
+   * - 在未设置活动对象或活动选择中只剩下一个活动对象时，设置活动对象。
    * ---
-   * - If the active object is the active selection we add/remove `target` from it
-   * - If not, add the active object and `target` to the active selection and make it the active object.
+   * - 如果活动对象是活动选择，我们从中添加/移除 `target`
+   * - 如果不是，则将活动对象和 `target` 添加到活动选择中，并将其设置为活动对象。
    * @private
-   * @param {TPointerEvent} e Event object
-   * @param {FabricObject} target target of event to select/deselect
-   * @returns true if grouping occurred
+   * @param {TPointerEvent} e 事件对象
+   * @param {FabricObject} target 要选择/取消选择的事件目标
+   * @returns 如果发生分组操作，返回 true
    */
   protected handleMultiSelection(e: TPointerEvent, target?: FabricObject) {
-    const activeObject = this._activeObject;
-    const isAS = isActiveSelection(activeObject);
-    console.log('activeObject', activeObject, isAS);
+    const activeObject = this._activeObject; // 获取当前活动对象
+    const isAS = isActiveSelection(activeObject); // 检查活动对象是否是活动选择
     if (
-      // check if an active object exists on canvas and if the user is pressing the `selectionKey` while canvas supports multi selection.
+      // 检查画布上是否存在活动对象，并且用户是否按下了 `selectionKey`，同时画布支持多选
       !!activeObject &&
       this._isSelectionKeyPressed(e) &&
       this.selection &&
-      // on top of that the user also has to hit a target that is selectable.
+      // 此外，用户还必须点击一个可选择的目标
       !!target &&
       target.selectable &&
-      // group target and active object only if they are different objects
-      // else we try to find a subtarget of `ActiveSelection`
+      // 只有当目标对象和活动对象不同时才进行分组
+      // 否则我们尝试查找 `ActiveSelection` 的子目标
       (activeObject !== target || isAS) &&
-      //  make sure `activeObject` and `target` aren't ancestors of each other in case `activeObject` is not `ActiveSelection`
-      // if it is then we want to remove `target` from it
+      // 确保 `activeObject` 和 `target` 不是彼此的祖先（如果 `activeObject` 不是 `ActiveSelection`）
+      // 如果是 `ActiveSelection`，则我们希望从中移除 `target`
       (isAS ||
         (!target.isDescendantOf(activeObject) &&
-          !activeObject.isDescendantOf(target))) &&
-      //  target accepts selection
-      !target.onSelect({ e }) &&
-      // make sure we are not on top of a control
-      !activeObject.getActiveControl()
+          !activeObject.isDescendantOf(target)) &&
+        // 目标接受选择
+        !target.onSelect({ e }) &&
+        // 确保我们没有点击控制点
+        !activeObject.getActiveControl())
     ) {
-      if (isAS) {
-        const prevActiveObjects = activeObject.getObjects();
-        if (target === activeObject) {
-          const pointer = this.getViewportPoint(e);
+      if (isAS) { // 如果活动对象是活动选择
+        const prevActiveObjects = activeObject.getObjects(); // 获取活动选择中的所有对象
+        if (target === activeObject) { // 如果目标是活动选择本身
+          const pointer = this.getViewportPoint(e); // 获取指针位置
           target =
-            // first search active objects for a target to remove
+            // 首先在活动对象中查找要移除的目标
             this.searchPossibleTargets(prevActiveObjects, pointer) ||
-            //  if not found, search under active selection for a target to add
-            // `prevActiveObjects` will be searched but we already know they will not be found
+            // 如果未找到，则在活动选择下查找要添加的目标
+            // `prevActiveObjects` 会被搜索，但我们知道它们不会被找到
             this.searchPossibleTargets(this._objects, pointer);
-          // if nothing is found bail out
+          // 如果未找到任何目标，则退出
           if (!target || !target.selectable) {
             return false;
           }
         }
-        if (target.group === activeObject) {
-          // `target` is part of active selection => remove it
+        if (target.group === activeObject) { // 如果目标是活动选择的一部分
+          // 从活动选择中移除目标
           activeObject.remove(target);
-          this._hoveredTarget = target;
-          this._hoveredTargets = [...this.targets];
-          // if after removing an object we are left with one only...
+          this._hoveredTarget = target; // 设置悬停目标
+          this._hoveredTargets = [...this.targets]; // 设置悬停目标数组
+          // 如果移除对象后只剩下一个对象
           if (activeObject.size() === 1) {
-            // activate last remaining object
-            // deselecting the active selection will remove the remaining object from it
+            // 激活最后一个剩余的对象
+            // 取消选择活动选择将从中移除剩余的对象
             this._setActiveObject(activeObject.item(0), e);
           }
         } else {
-          // `target` isn't part of active selection => add it
+          // 如果目标不是活动选择的一部分，则将其添加到活动选择中
           activeObject.multiSelectAdd(target);
-          this._hoveredTarget = activeObject;
-          this._hoveredTargets = [...this.targets];
+          this._hoveredTarget = activeObject; // 设置悬停目标
+          this._hoveredTargets = [...this.targets]; // 设置悬停目标数组
         }
-        this._fireSelectionEvents(prevActiveObjects, e);
-      } else {
+        this._fireSelectionEvents(prevActiveObjects, e); // 触发选择事件
+      } else { // 如果活动对象不是活动选择
         (activeObject as IText).isEditing &&
-          (activeObject as IText).exitEditing();
-        // add the active object and the target to the active selection and set it as the active object
+          (activeObject as IText).exitEditing(); // 如果活动对象是文本对象且正在编辑，则退出编辑模式
+        // 将活动对象和目标添加到活动选择中，并将其设置为活动对象
         const klass =
-          classRegistry.getClass<typeof ActiveSelection>('ActiveSelection');
+          classRegistry.getClass<typeof ActiveSelection>('ActiveSelection'); // 获取活动选择类
         const newActiveSelection = new klass([], {
-          /**
-           * it is crucial to pass the canvas ref before calling {@link ActiveSelection#multiSelectAdd}
-           * since it uses {@link FabricObject#isInFrontOf} which relies on the canvas ref
-           */
+          // 在调用 `multiSelectAdd` 之前传递画布引用非常重要
+          // 因为它使用 `FabricObject#isInFrontOf`，这依赖于画布引用
           canvas: this,
         });
-        newActiveSelection.multiSelectAdd(activeObject, target);
-        this._hoveredTarget = newActiveSelection;
-        // ISSUE 4115: should we consider subTargets here?
+        newActiveSelection.multiSelectAdd(activeObject, target); // 将活动对象和目标添加到新的活动选择中
+        this._hoveredTarget = newActiveSelection; // 设置悬停目标
+        // ISSUE 4115: 我们是否应该在这里考虑子目标？
         // this._hoveredTargets = [];
         // this._hoveredTargets = this.targets.concat();
-        this._setActiveObject(newActiveSelection, e);
-        this._fireSelectionEvents([activeObject], e);
+        this._setActiveObject(newActiveSelection, e); // 设置新的活动选择为活动对象
+        this._fireSelectionEvents([activeObject], e); // 触发选择事件
       }
-      return true;
+      return true; // 返回 true 表示发生了分组操作
     }
-    return false;
+    return false; // 返回 false 表示未发生分组操作
   }
 
   /**

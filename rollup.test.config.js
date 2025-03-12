@@ -1,5 +1,5 @@
 import commonjs from '@rollup/plugin-commonjs';
-import ts from 'rollup-plugin-ts';
+import typescript from '@rollup/plugin-typescript';
 
 // https://github.com/artberri/rollup-plugin-istanbul
 
@@ -16,9 +16,9 @@ export default {
     },
   ],
   plugins: [
-    ts({
-      /* Plugin options */
-    }),
     commonjs(),
+    typescript({
+      tsconfig: './tsconfig.json'
+    }),
   ],
 };

@@ -655,37 +655,37 @@ export class FabricObject<
   }
 
   /**
-   * Renders an object on a specified context
-   * @param {CanvasRenderingContext2D} ctx Context to render on
+   * 在指定的上下文中渲染一个对象
+   * @param {CanvasRenderingContext2D} ctx 要渲染的上下文
    */
   render(ctx: CanvasRenderingContext2D) {
-    // do not render if width/height are zeros or object is not visible
+    // 如果宽度/高度为零或对象不可见，则不进行渲染
     if (this.isNotVisible()) {
-      return;
+      return; // 如果对象不可见，直接返回
     }
     if (
-      this.canvas &&
-      this.canvas.skipOffscreen &&
-      !this.group &&
-      !this.isOnScreen()
+      this.canvas && // 检查对象是否在画布上
+      this.canvas.skipOffscreen && // 检查画布是否跳过离屏渲染
+      !this.group && // 确保对象不在组中
+      !this.isOnScreen() // 检查对象是否在屏幕上
     ) {
-      return;
+      return; // 如果对象不在屏幕上，直接返回
     }
-    ctx.save();
-    this._setupCompositeOperation(ctx);
-    this.drawSelectionBackground(ctx);
-    this.transform(ctx);
-    this._setOpacity(ctx);
-    this._setShadow(ctx);
-    if (this.shouldCache()) {
-      (this as TCachedFabricObject).renderCache();
-      (this as TCachedFabricObject).drawCacheOnCanvas(ctx);
+    ctx.save(); // 保存当前上下文状态
+    this._setupCompositeOperation(ctx); // 设置复合操作
+    this.drawSelectionBackground(ctx); // 绘制选择背景
+    this.transform(ctx); // 应用变换
+    this._setOpacity(ctx); // 设置透明度
+    this._setShadow(ctx); // 设置阴影
+    if (this.shouldCache()) { // 检查是否需要缓存
+      (this as TCachedFabricObject).renderCache(); // 渲染缓存
+      (this as TCachedFabricObject).drawCacheOnCanvas(ctx); // 在画布上绘制缓存
     } else {
-      this._removeCacheCanvas();
-      this.drawObject(ctx, false, {});
-      this.dirty = false;
+      this._removeCacheCanvas(); // 移除缓存画布
+      this.drawObject(ctx, false, {}); // 绘制对象
+      this.dirty = false; // 标记对象为干净状态
     }
-    ctx.restore();
+    ctx.restore(); // 恢复上下文状态
   }
 
   drawSelectionBackground(_ctx: CanvasRenderingContext2D) {
@@ -828,29 +828,29 @@ export class FabricObject<
   }
 
   /**
-   * Execute the drawing operation for an object on a specified context
-   * @param {CanvasRenderingContext2D} ctx Context to render on
-   * @param {boolean} forClipping apply clipping styles
-   * @param {DrawContext} context additional context for rendering
+   * 在指定的上下文中执行对象的绘制操作
+   * @param {CanvasRenderingContext2D} ctx 要渲染的上下文
+   * @param {boolean} forClipping 应用剪切样式
+   * @param {DrawContext} context 渲染的附加上下文
    */
   drawObject(
     ctx: CanvasRenderingContext2D,
     forClipping: boolean | undefined,
     context: DrawContext
   ) {
-    const originalFill = this.fill,
-      originalStroke = this.stroke;
-    if (forClipping) {
-      this.fill = 'black';
-      this.stroke = '';
-      this._setClippingProperties(ctx);
+    const originalFill = this.fill, // 保存原始填充颜色
+      originalStroke = this.stroke; // 保存原始描边颜色
+    if (forClipping) { // 如果是用于剪切
+      this.fill = 'black'; // 设置填充颜色为黑色
+      this.stroke = ''; // 清空描边颜色
+      this._setClippingProperties(ctx); // 设置剪切属性
     } else {
-      this._renderBackground(ctx);
+      this._renderBackground(ctx); // 渲染背景
     }
-    this._render(ctx);
-    this._drawClipPath(ctx, this.clipPath, context);
-    this.fill = originalFill;
-    this.stroke = originalStroke;
+    this._render(ctx); // 渲染对象
+    this._drawClipPath(ctx, this.clipPath, context); // 绘制剪切路径
+    this.fill = originalFill; // 恢复原始填充颜色
+    this.stroke = originalStroke; // 恢复原始描边颜色
   }
 
   private createClipPathLayer(
