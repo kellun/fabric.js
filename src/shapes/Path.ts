@@ -88,13 +88,15 @@ export class Path<
   }
 
   /**
+   * 设置路径数据并更新对象的边界框
    * @private
-   * @param {TComplexPathData | string} path Path data (sequence of coordinates and corresponding "command" tokens)
-   * @param {boolean} [adjustPosition] pass true to reposition the object according to the bounding box
-   * @returns {Point} top left position of the bounding box, useful for complementary positioning
+   * @param {TComplexPathData | string} path 路径数据，可以是复杂路径数据数组或SVG路径字符串
+   * @param {boolean} [adjustPosition] 是否根据新的边界框调整对象位置，默认为false
    */
   _setPath(path: TComplexPathData | string, adjustPosition?: boolean) {
+    // 将路径数据转换为简化格式：如果是数组直接转换，如果是字符串先解析
     this.path = makePathSimpler(Array.isArray(path) ? path : parsePath(path));
+    // 根据新的路径数据更新对象的边界框，并根据参数决定是否调整位置
     this.setBoundingBox(adjustPosition);
   }
 

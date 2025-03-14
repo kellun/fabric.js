@@ -19,11 +19,11 @@ export abstract class ITextClickBehavior<
   SProps extends SerializedTextProps = SerializedTextProps,
   EventSpec extends ITextEvents = ITextEvents,
 > extends ITextKeyBehavior<Props, SProps, EventSpec> {
-  private declare __lastSelected: boolean;
-  private declare __lastClickTime: number;
-  private declare __lastLastClickTime: number;
-  private declare __lastPointer: XY | Record<string, never>;
-  private declare __newClickTime: number;
+  declare private __lastSelected: boolean;
+  declare private __lastClickTime: number;
+  declare private __lastLastClickTime: number;
+  declare private __lastPointer: XY | Record<string, never>;
+  declare private __newClickTime: number;
 
   protected draggableTextDelegate: DraggableTextDelegate;
 
@@ -127,12 +127,13 @@ export abstract class ITextClickBehavior<
   }
 
   /**
-   * Default event handler for the basic functionalities needed on _mouseDown
-   * can be overridden to do something different.
-   * Scope of this implementation is: find the click position, set selectionStart
-   * find selectionEnd, initialize the drawing of either cursor or selection area
-   * initializing a mousedDown on a text area will cancel fabricjs knowledge of
-   * current compositionMode. It will be set to false.
+   * 默认的鼠标按下事件处理程序，用于处理文本对象的基本功能
+   * 可以被重写以实现不同的行为
+   * 该实现的主要功能包括：
+   * 1. 查找点击位置
+   * 2. 设置 selectionStart 和 selectionEnd
+   * 3. 初始化光标或选择区域的绘制
+   * 4. 在文本区域初始化鼠标按下事件会取消 fabricjs 对当前组合输入模式（如中文输入法）的跟踪，将其设置为 false
    */
   _mouseDownHandler({ e }: TPointerEventInfo) {
     if (
@@ -149,52 +150,67 @@ export abstract class ITextClickBehavior<
     }
 
     this.canvas.textEditingManager.register(this);
+    // if (this.selected) {
+    //   this.inCompositionMode = false;
+    //   this.setCursorByClick(e);
+    // }
+    this.inCompositionMode = false;
+    this.setCursorByClick(e);
 
-    if (this.selected) {
-      this.inCompositionMode = false;
-      this.setCursorByClick(e);
-    }
+    // if (this.isEditing) {
+    //   this.__selectionStartOnMouseDown = this.selectionStart;
+    //   if (this.selectionStart === this.selectionEnd) {
+    //     this.abortCursorAnimation();
+    //   }
+    //   this.renderCursorOrSelection();
+    // }
 
-    if (this.isEditing) {
-      this.__selectionStartOnMouseDown = this.selectionStart;
-      if (this.selectionStart === this.selectionEnd) {
-        this.abortCursorAnimation();
-      }
-      this.renderCursorOrSelection();
+    this.__selectionStartOnMouseDown = this.selectionStart;
+    if (this.selectionStart === this.selectionEnd) {
+      this.abortCursorAnimation();
     }
+    this.renderCursorOrSelection();
   }
 
   /**
-   * Default event handler for the basic functionalities needed on mousedown:before
-   * can be overridden to do something different.
-   * Scope of this implementation is: verify the object is already selected when mousing down
+   * 处理鼠标按下前的事件
+   * 主要目的是确保在对象变为不可选择时不会意外触发编辑模式
+   * @param {TPointerEventInfo} e 鼠标事件信息
    */
   _mouseDownHandlerBefore({ e }: TPointerEventInfo) {
+    // 检查画布是否存在、文本是否可编辑以及是否为左键点击
     if (!this.canvas || !this.editable || notALeftClick(e)) {
       return;
     }
-    // we want to avoid that an object that was selected and then becomes unselectable,
-    // may trigger editing mode in some way.
-    this.selected = this === this.canvas._activeObject;
+    // 我们想要避免一个对象被选中后变为不可选择时，
+    // 可能会以某种方式触发编辑模式。
+    // this.selected = this === this.canvas._activeObject;
+    this.selected = this.canvas._activeObjects?.includes(this) === true;
   }
 
   /**
-   * standard handler for mouse up, overridable
+   * 处理鼠标抬起事件的标准处理程序，可被重写
+   * @param {TPointerEventInfo} e 鼠标事件信息
    * @private
    */
   mouseUpHandler({ e, transform }: TPointerEventInfo) {
+    // 结束拖拽操作并获取是否发生了拖拽
     const didDrag = this.draggableTextDelegate.end(e);
+    // 如果存在画布
     if (this.canvas) {
+      // 从文本编辑管理器中注销当前对象
       this.canvas.textEditingManager.unregister(this);
 
+      // 获取当前活动对象
       const activeObject = this.canvas._activeObject;
+      // 如果存在活动对象且不是当前对象
       if (activeObject && activeObject !== this) {
-        // avoid running this logic when there is an active object
-        // this because is possible with shift click and fast clicks,
-        // to rapidly deselect and reselect this object and trigger an enterEdit
+        // 避免在有活动对象时运行此逻辑
+        // 因为在快速点击和shift点击时，可能会快速取消选择和重新选择此对象并触发进入编辑模式
         return;
       }
     }
+    // 检查对象是否可编辑、组是否可交互、是否执行了变换操作、是否为左键点击、是否发生了拖拽
     if (
       !this.editable ||
       (this.group && !this.group.interactive) ||
@@ -205,16 +221,22 @@ export abstract class ITextClickBehavior<
       return;
     }
 
+    // 如果上次点击时对象被选中且没有活动控件
     if (this.__lastSelected && !this.getActiveControl()) {
+      // 取消选中状态
       this.selected = false;
       this.__lastSelected = false;
+      // 进入编辑模式
       this.enterEditing(e);
+      // 如果选择开始和结束位置相同，初始化延迟光标
       if (this.selectionStart === this.selectionEnd) {
         this.initDelayedCursor(true);
       } else {
+        // 否则渲染光标或选择区域
         this.renderCursorOrSelection();
       }
     } else {
+      // 否则设置对象为选中状态
       this.selected = true;
     }
   }

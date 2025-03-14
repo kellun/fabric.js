@@ -58,21 +58,23 @@ export abstract class ITextBehavior<
   declare abstract hiddenTextarea: HTMLTextAreaElement | null;
 
   /**
-   * Helps determining when the text is in composition, so that the cursor
-   * rendering is altered.
+   * 用于确定文本是否处于组合输入模式（如中文输入法），
+   * 以便相应地调整光标的渲染方式。
+   * 当用户使用输入法（如中文、日文等）进行组合输入时，
+   * 该标志位会被设置为true，表示当前处于组合输入状态。
    */
-  protected declare inCompositionMode: boolean;
+  declare protected inCompositionMode: boolean;
 
-  protected declare _reSpace: RegExp;
-  private declare _currentTickState?: ValueAnimation;
-  private declare _currentTickCompleteState?: ValueAnimation;
+  declare protected _reSpace: RegExp;
+  declare private _currentTickState?: ValueAnimation;
+  declare private _currentTickCompleteState?: ValueAnimation;
   protected _currentCursorOpacity = 1;
-  private declare _textBeforeEdit: string;
-  protected declare __selectionStartOnMouseDown: number;
+  declare private _textBeforeEdit: string;
+  declare protected __selectionStartOnMouseDown: number;
 
-  protected declare selected: boolean;
-  protected declare cursorOffsetCache: { left?: number; top?: number };
-  protected declare _savedProps?: {
+  declare protected selected: boolean;
+  declare protected cursorOffsetCache: { left?: number; top?: number };
+  declare protected _savedProps?: {
     hasControls: boolean;
     borderColor: string;
     lockMovementX: boolean;
@@ -82,7 +84,7 @@ export abstract class ITextBehavior<
     defaultCursor?: CSSStyleDeclaration['cursor'];
     moveCursor?: CSSStyleDeclaration['cursor'];
   };
-  protected declare _selectionDirection: 'left' | 'right' | null;
+  declare protected _selectionDirection: 'left' | 'right' | null;
 
   abstract initHiddenTextarea(): void;
   abstract _fireSelectionChanged(): void;
@@ -514,7 +516,11 @@ export abstract class ITextBehavior<
   }
 
   /**
-   * @private
+   * 更新隐藏的textarea元素的状态
+   * 1. 清空光标偏移缓存
+   * 2. 如果不存在隐藏的textarea则直接返回
+   * 3. 如果不在组合输入模式下，更新textarea的选择范围
+   * 4. 更新textarea的位置
    */
   _updateTextarea() {
     this.cursorOffsetCache = {};
@@ -534,7 +540,16 @@ export abstract class ITextBehavior<
   }
 
   /**
-   * @private
+   * 从隐藏的textarea更新文本对象的状态
+   * 1. 如果不存在隐藏的textarea则直接返回
+   * 2. 清空光标偏移缓存
+   * 3. 更新文本内容
+   * 4. 标记对象为脏状态
+   * 5. 重新计算尺寸和坐标
+   * 6. 将textarea的选择范围转换为grapheme索引
+   * 7. 更新选择结束位置
+   * 8. 如果不在组合输入模式下，更新选择开始位置
+   * 9. 更新textarea的位置
    */
   updateFromTextArea() {
     if (!this.hiddenTextarea) {
@@ -570,8 +585,14 @@ export abstract class ITextBehavior<
   }
 
   /**
-   * @private
-   * @return {Object} style contains style for hiddenTextarea
+   * 计算隐藏textarea元素的位置
+   * 1. 如果没有画布，返回默认位置
+   * 2. 根据组合输入模式确定光标位置
+   * 3. 获取光标边界和位置信息
+   * 4. 计算字符高度和画布缩放比例
+   * 5. 计算textarea的最终位置，确保不超出画布边界
+   * 6. 添加画布在文档中的偏移量
+   * @return {Object} 包含隐藏textarea的样式信息
    */
   _calcTextareaPosition() {
     if (!this.canvas) {

@@ -31,7 +31,7 @@
   },
   "search.useIgnoreFiles": true,
   "[typescript]": {
-    "editor.defaultFormatter": "vscode.typescript-language-features"
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
   },
   "marscode.codeCompletionPro": {
     "enableCodeCompletionPro": true

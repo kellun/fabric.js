@@ -365,36 +365,52 @@ export class IText<
   }
 
   /**
-   * @override block cursor/selection logic while rendering the exported canvas
-   * @todo this workaround should be replaced with a more robust solution
+   * 将对象转换为Canvas元素
+   * 在导出Canvas时临时禁用光标/选择逻辑
+   * @todo 这个临时解决方案应该被更健壮的方案替代
+   * @param {ObjectToCanvasElementOptions} [options] 可选的配置项
+   * @return {HTMLCanvasElement} 返回生成的Canvas元素
    */
   toCanvasElement(options?: ObjectToCanvasElementOptions): HTMLCanvasElement {
+    // 保存当前编辑状态
     const isEditing = this.isEditing;
+    // 临时禁用编辑模式
     this.isEditing = false;
+    // 调用父类方法生成Canvas元素
     const canvas = super.toCanvasElement(options);
+    // 恢复之前的编辑状态
     this.isEditing = isEditing;
+    // 返回生成的Canvas元素
     return canvas;
   }
 
   /**
-   * Renders cursor or selection (depending on what exists)
-   * it does on the contextTop. If contextTop is not available, do nothing.
+   * 渲染光标或选区（根据当前状态决定）
+   * 在contextTop上执行渲染，如果contextTop不可用则不执行任何操作
    */
   renderCursorOrSelection() {
+    // 如果当前不在编辑状态，直接返回
     if (!this.isEditing) {
       return;
     }
+    // 清除并获取contextTop上下文
     const ctx = this.clearContextTop(true);
+    // 如果获取上下文失败，直接返回
     if (!ctx) {
       return;
     }
+    // 获取光标边界信息
     const boundaries = this._getCursorBoundaries();
+    // 如果选区起始和结束位置相同且不在输入法组合模式，渲染光标
     if (this.selectionStart === this.selectionEnd && !this.inCompositionMode) {
       this.renderCursor(ctx, boundaries);
     } else {
+      // 否则渲染选区
       this.renderSelection(ctx, boundaries);
     }
+    // 标记contextTop为脏，需要重绘
     this.canvas!.contextTopDirty = true;
+    // 恢复上下文状态
     ctx.restore();
   }
 
@@ -560,11 +576,12 @@ export class IText<
   }
 
   /**
-   * Renders text selection
-   * @param {Object} boundaries Object with left/top/leftOffset/topOffset
-   * @param {CanvasRenderingContext2D} ctx transformed context to draw on
+   * 渲染文本选区
+   * @param {CanvasRenderingContext2D} ctx 画布上下文
+   * @param {CursorBoundaries} boundaries 光标边界信息
    */
   renderSelection(ctx: CanvasRenderingContext2D, boundaries: CursorBoundaries) {
+    // 根据是否处于输入法组合模式，获取选区起始和结束位置
     const selection = {
       selectionStart: this.inCompositionMode
         ? this.hiddenTextarea!.selectionStart
@@ -573,6 +590,7 @@ export class IText<
         ? this.hiddenTextarea!.selectionEnd
         : this.selectionEnd,
     };
+    // 调用内部方法渲染选区
     this._renderSelection(ctx, selection, boundaries);
   }
 
@@ -595,43 +613,53 @@ export class IText<
   }
 
   /**
-   * Renders text selection
+   * 渲染文本选区
    * @private
-   * @param {{ selectionStart: number, selectionEnd: number }} selection
-   * @param {Object} boundaries Object with left/top/leftOffset/topOffset
-   * @param {CanvasRenderingContext2D} ctx transformed context to draw on
+   * @param {CanvasRenderingContext2D} ctx 画布上下文
+   * @param {{ selectionStart: number, selectionEnd: number }} selection 选区对象，包含起始和结束位置
+   * @param {CursorBoundaries} boundaries 光标边界信息
    */
   _renderSelection(
     ctx: CanvasRenderingContext2D,
     selection: { selectionStart: number; selectionEnd: number },
     boundaries: CursorBoundaries,
   ) {
+    // 获取选区起始和结束位置
     const selectionStart = selection.selectionStart,
       selectionEnd = selection.selectionEnd,
+      // 判断是否为两端对齐
       isJustify = this.textAlign.includes(JUSTIFY),
+      // 获取起始和结束位置的二维坐标
       start = this.get2DCursorLocation(selectionStart),
       end = this.get2DCursorLocation(selectionEnd),
+      // 获取起始和结束行号
       startLine = start.lineIndex,
       endLine = end.lineIndex,
+      // 获取起始和结束字符索引
       startChar = start.charIndex < 0 ? 0 : start.charIndex,
       endChar = end.charIndex < 0 ? 0 : end.charIndex;
 
+    // 遍历每一行
     for (let i = startLine; i <= endLine; i++) {
+      // 获取当前行的左边距
       const lineOffset = this._getLineLeftOffset(i) || 0;
       let lineHeight = this.getHeightOfLine(i),
         realLineHeight = 0,
         boxStart = 0,
         boxEnd = 0;
 
+      // 如果是起始行，设置选区起始位置
       if (i === startLine) {
         boxStart = this.__charBounds[startLine][startChar].left;
       }
+      // 如果是中间行，设置选区结束位置为行宽
       if (i >= startLine && i < endLine) {
         boxEnd =
           isJustify && !this.isEndOfWrapping(i)
             ? this.width
             : this.getLineWidth(i) || 5; // WTF is this 5?
       } else if (i === endLine) {
+        // 如果是结束行，根据字符位置设置选区结束位置
         if (endChar === 0) {
           boxEnd = this.__charBounds[endLine][endChar].left;
         } else {
@@ -642,21 +670,27 @@ export class IText<
             charSpacing;
         }
       }
+      // 计算实际行高
       realLineHeight = lineHeight;
+      // 根据行高调整选区高度
       if (this.lineHeight < 1 || (i === endLine && this.lineHeight > 1)) {
         lineHeight /= this.lineHeight;
       }
+      // 计算绘制起始位置和高度
       let drawStart = boundaries.left + lineOffset + boxStart,
         drawHeight = lineHeight,
         extraTop = 0;
       const drawWidth = boxEnd - boxStart;
+      // 如果是输入法组合模式，设置特殊样式
       if (this.inCompositionMode) {
         ctx.fillStyle = this.compositionColor || 'black';
         drawHeight = 1;
         extraTop = lineHeight;
       } else {
+        // 否则使用选区颜色
         ctx.fillStyle = this.selectionColor;
       }
+      // 处理从右到左文本的绘制位置
       if (this.direction === 'rtl') {
         if (
           this.textAlign === RIGHT ||
@@ -673,12 +707,14 @@ export class IText<
           drawStart = boundaries.left + lineOffset - boxEnd;
         }
       }
+      // 绘制选区矩形
       ctx.fillRect(
         drawStart,
         boundaries.top + boundaries.topOffset + extraTop,
         drawWidth,
         drawHeight,
       );
+      // 更新topOffset
       boundaries.topOffset += realLineHeight;
     }
   }

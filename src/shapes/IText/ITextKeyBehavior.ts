@@ -53,9 +53,9 @@ export abstract class ITextKeyBehavior<
    */
   declare hiddenTextareaContainer?: HTMLElement | null;
 
-  private declare _clickHandlerInitialized: boolean;
-  private declare _copyDone: boolean;
-  private declare fromPaste: boolean;
+  declare private _clickHandlerInitialized: boolean;
+  declare private _copyDone: boolean;
+  declare private fromPaste: boolean;
 
   /**
    * Initializes hidden textarea (needed to bring up keyboard in iOS)
@@ -108,62 +108,77 @@ export abstract class ITextKeyBehavior<
   }
 
   /**
-   * Handles keydown event
-   * only used for arrows and combination of modifier keys.
-   * @param {KeyboardEvent} e Event object
+   * 处理键盘按下事件
+   * 主要用于处理方向键和组合键
+   * @param {KeyboardEvent} e 键盘事件对象
    */
   onKeyDown(e: KeyboardEvent) {
+    // 如果当前不在编辑状态，直接返回
     if (!this.isEditing) {
       return;
     }
+    // 根据文本方向选择对应的键位映射表
     const keyMap = this.direction === 'rtl' ? this.keysMapRtl : this.keysMap;
+    // 如果按下的键在键位映射表中
     if (e.keyCode in keyMap) {
+      // 执行对应的处理函数
       (this[keyMap[e.keyCode] as keyof this] as (arg: KeyboardEvent) => void)(
         e,
       );
     } else if (e.keyCode in this.ctrlKeysMapDown && (e.ctrlKey || e.metaKey)) {
+      // 如果是Ctrl/Cmd组合键，执行对应的处理函数
       (
         this[this.ctrlKeysMapDown[e.keyCode] as keyof this] as (
           arg: KeyboardEvent,
         ) => void
       )(e);
     } else {
+      // 其他按键直接返回
       return;
     }
+    // 阻止事件冒泡和默认行为
     e.stopImmediatePropagation();
     e.preventDefault();
+    // 如果是方向键（keyCode 33-40）
     if (e.keyCode >= 33 && e.keyCode <= 40) {
-      // if i press an arrow key just update selection
+      // 更新选区状态
       this.inCompositionMode = false;
       this.clearContextTop();
       this.renderCursorOrSelection();
     } else {
+      // 其他情况请求重新渲染
       this.canvas && this.canvas.requestRenderAll();
     }
   }
 
   /**
-   * Handles keyup event
-   * We handle KeyUp because ie11 and edge have difficulties copy/pasting
-   * if a copy/cut event fired, keyup is dismissed
-   * @param {KeyboardEvent} e Event object
+   * 处理键盘抬起事件
+   * 我们处理KeyUp是因为IE11和Edge在复制/粘贴时存在问题
+   * 如果触发了copy/cut事件，keyup事件会被忽略
+   * @param {KeyboardEvent} e 键盘事件对象
    */
   onKeyUp(e: KeyboardEvent) {
+    // 如果不在编辑状态，或者已经完成复制操作，或者处于输入法组合模式，直接返回
     if (!this.isEditing || this._copyDone || this.inCompositionMode) {
       this._copyDone = false;
       return;
     }
+    // 如果按下的键在Ctrl/Cmd组合键映射表中
     if (e.keyCode in this.ctrlKeysMapUp && (e.ctrlKey || e.metaKey)) {
+      // 执行对应的处理函数
       (
         this[this.ctrlKeysMapUp[e.keyCode] as keyof this] as (
           arg: KeyboardEvent,
         ) => void
       )(e);
     } else {
+      // 其他情况直接返回
       return;
     }
+    // 阻止事件冒泡和默认行为
     e.stopImmediatePropagation();
     e.preventDefault();
+    // 请求画布重新渲染
     this.canvas && this.canvas.requestRenderAll();
   }
 

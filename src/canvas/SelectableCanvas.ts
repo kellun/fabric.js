@@ -52,6 +52,7 @@ import { canvasDefaults } from './CanvasOptions';
 import { Intersection } from '../Intersection';
 import { isActiveSelection } from '../util/typeAssertions';
 import type { OlpShape } from '../shapes/Elements/OlpShape';
+import type { Textbox } from '../shapes/Textbox';
 
 /**
  * Canvas class
@@ -149,7 +150,8 @@ import type { OlpShape } from '../shapes/Elements/OlpShape';
  */
 export class SelectableCanvas<EventSpec extends CanvasEvents = CanvasEvents>
   extends StaticCanvas<EventSpec>
-  implements Omit<CanvasOptions, 'enablePointerEvents'> {
+  implements Omit<CanvasOptions, 'enablePointerEvents'>
+{
   declare _objects: FabricObject[];
 
   // transform config
@@ -208,7 +210,6 @@ export class SelectableCanvas<EventSpec extends CanvasEvents = CanvasEvents>
    * @type {FabricObject[]}
    */
   targets: FabricObject[] = [];
-
 
   /**
    * Keep track of the hovered target
@@ -269,7 +270,7 @@ export class SelectableCanvas<EventSpec extends CanvasEvents = CanvasEvents>
    * We do this because there are some HTML DOM inspection functions to get the actual pointer coordinates
    * @type {Point}
    */
-  protected declare _absolutePointer?: Point;
+  declare protected _absolutePointer?: Point;
 
   /**
    * During a mouse event we may need the pointer multiple times in multiple functions.
@@ -278,7 +279,7 @@ export class SelectableCanvas<EventSpec extends CanvasEvents = CanvasEvents>
    * We do this because there are some HTML DOM inspection functions to get the actual pointer coordinates
    * @type {Point}
    */
-  protected declare _pointer?: Point;
+  declare protected _pointer?: Point;
 
   /**
    * During a mouse event we may need the target multiple times in multiple functions.
@@ -286,7 +287,7 @@ export class SelectableCanvas<EventSpec extends CanvasEvents = CanvasEvents>
    * lifespan. Every fabricJS mouse event create and delete the cache every time
    * @type {FabricObject}
    */
-  protected declare _target?: FabricObject;
+  declare protected _target?: FabricObject;
 
   static ownDefaults = canvasDefaults;
 
@@ -304,10 +305,10 @@ export class SelectableCanvas<EventSpec extends CanvasEvents = CanvasEvents>
   get wrapperEl() {
     return this.elements.container;
   }
-  private declare pixelFindCanvasEl: HTMLCanvasElement;
-  private declare pixelFindContext: CanvasRenderingContext2D;
+  declare private pixelFindCanvasEl: HTMLCanvasElement;
+  declare private pixelFindContext: CanvasRenderingContext2D;
 
-  protected declare _isCurrentlyDrawing: boolean;
+  declare protected _isCurrentlyDrawing: boolean;
   declare freeDrawingBrush?: BaseBrush;
   declare _activeObject?: FabricObject;
   declare _activeObjects?: FabricObject[];
@@ -365,8 +366,8 @@ export class SelectableCanvas<EventSpec extends CanvasEvents = CanvasEvents>
     const activeObject = this._activeObject;
     return !this.preserveObjectStacking && activeObject
       ? this._objects
-        .filter((object) => !object.group && object !== activeObject)
-        .concat(activeObject)
+          .filter((object) => !object.group && object !== activeObject)
+          .concat(activeObject)
       : this._objects;
   }
 
@@ -436,36 +437,33 @@ export class SelectableCanvas<EventSpec extends CanvasEvents = CanvasEvents>
   }
 
   /**
-   * Returns true if object is transparent at a certain location
-   * Clarification: this is `is target transparent at location X or are controls there`
-   * @TODO this seems dumb that we treat controls with transparency. we can find controls
-   * programmatically without painting them, the cache canvas optimization is always valid
-   * @param {FabricObject} target Object to check
-   * @param {Number} x Left coordinate in viewport space
-   * @param {Number} y Top coordinate in viewport space
-   * @return {Boolean}
+   * 检查目标对象在指定位置是否透明
+   * @param {FabricObject} target 要检查的目标对象
+   * @param {Number} x 视口空间中的左坐标
+   * @param {Number} y 视口空间中的顶部坐标
+   * @return {Boolean} 如果目标在指定位置透明则返回true，否则返回false
    */
   isTargetTransparent(target: FabricObject, x: number, y: number): boolean {
-    const tolerance = this.targetFindTolerance;
-    const ctx = this.pixelFindContext;
-    this.clearContext(ctx);
-    ctx.save();
-    ctx.translate(-x + tolerance, -y + tolerance);
-    ctx.transform(...this.viewportTransform);
-    const selectionBgc = target.selectionBackgroundColor;
-    target.selectionBackgroundColor = '';
-    target.render(ctx);
-    target.selectionBackgroundColor = selectionBgc;
-    ctx.restore();
-    // our canvas is square, and made around tolerance.
-    // so tolerance in this case also represent the center of the canvas.
-    const enhancedTolerance = Math.round(tolerance * this.getRetinaScaling());
+    const tolerance = this.targetFindTolerance; // 获取目标查找容差
+    const ctx = this.pixelFindContext; // 获取像素查找上下文
+    this.clearContext(ctx); // 清除上下文
+    ctx.save(); // 保存上下文状态
+    ctx.translate(-x + tolerance, -y + tolerance); // 平移上下文
+    ctx.transform(...this.viewportTransform); // 应用视口变换
+    const selectionBgc = target.selectionBackgroundColor; // 保存目标的选择背景色
+    target.selectionBackgroundColor = ''; // 临时清除选择背景色
+    target.render(ctx); // 渲染目标对象
+    target.selectionBackgroundColor = selectionBgc; // 恢复选择背景色
+    ctx.restore(); // 恢复上下文状态
+    // 我们的画布是正方形的，以容差为中心
+    // 所以在这种情况下，容差也代表画布的中心
+    const enhancedTolerance = Math.round(tolerance * this.getRetinaScaling()); // 计算增强的容差值
     return isTransparent(
       ctx,
       enhancedTolerance,
       enhancedTolerance,
       enhancedTolerance,
-    );
+    ); // 检查指定位置是否透明
   }
 
   /**
@@ -598,11 +596,11 @@ export class SelectableCanvas<EventSpec extends CanvasEvents = CanvasEvents>
   ): void {
     const pointer = target.group
       ? // 将指针转换为目标的包含坐标平面
-      sendPointToPlane(
-        this.getScenePoint(e),
-        undefined,
-        target.group.calcTransformMatrix(),
-      )
+        sendPointToPlane(
+          this.getScenePoint(e),
+          undefined,
+          target.group.calcTransformMatrix(),
+        )
       : this.getScenePoint(e); // 获取场景中的指针位置
 
     const { key: corner = '', control } = target.getActiveControl() || {}, // 获取活动控制点
@@ -615,7 +613,6 @@ export class SelectableCanvas<EventSpec extends CanvasEvents = CanvasEvents>
       origin = this._shouldCenterTransform(target, action, altKey)
         ? ({ x: CENTER, y: CENTER } as const) // 如果需要中心变换，设置原点为中心
         : this._getOriginFromCorner(target, corner), // 否则从控制点获取原点
-
       /**
        * 相对于目标的包含坐标平面
        * 两者在每个点上都一致
@@ -651,7 +648,8 @@ export class SelectableCanvas<EventSpec extends CanvasEvents = CanvasEvents>
       };
 
     this._currentTransform = transform; // 设置当前变换
-    this.fire('before:transform', { // 触发变换前事件
+    this.fire('before:transform', {
+      // 触发变换前事件
       e,
       transform,
     });
@@ -714,7 +712,8 @@ export class SelectableCanvas<EventSpec extends CanvasEvents = CanvasEvents>
    * @return {FabricObject | null} 找到的目标
    */
   findTarget(e: TPointerEvent): FabricObject | undefined {
-    if (this.skipTargetFind) { // 如果跳过目标查找
+    if (this.skipTargetFind) {
+      // 如果跳过目标查找
       return undefined; // 返回未定义
     }
 
@@ -769,20 +768,21 @@ export class SelectableCanvas<EventSpec extends CanvasEvents = CanvasEvents>
   }
 
   /**
-   * Checks if the point is inside the object selection area including padding
-   * @param {FabricObject} obj Object to test against
-   * @param {Object} [pointer] point in scene coordinates
-   * @return {Boolean} true if point is contained within an area of given object
-   * @private
+   * 检查点是否在对象的选择区域内（包括padding）
+   * @param {FabricObject} obj 要检查的对象
+   * @param {Point} point 场景坐标系中的点
+   * @return {Boolean} 如果点在对象的选择区域内返回true，否则返回false
    */
   private _pointIsInObjectSelectionArea(obj: FabricObject, point: Point) {
-    // getCoords will already take care of group de-nesting
+    // 获取对象的坐标，getCoords会自动处理组的嵌套
     let coords = obj.getCoords();
 
-    const isOlpShape = obj.get('type') === 'OlpShape'
+    // 检查对象是否是OlpShape类型
+    const isOlpShape = obj.get('type') === 'olpshape';
     if (isOlpShape) {
       // 通过textboxCoords计算obj.textbox相对于canvas的坐标
-      const textboxCoords = (obj as OlpShape).textbox.getCoords();
+      const textbox = (obj as OlpShape)._objects[0] as Textbox;
+      const textboxCoords = textbox.getCoords();
 
       // 获取obj的变换矩阵
       const objMatrix = obj.calcTransformMatrix();
@@ -790,7 +790,7 @@ export class SelectableCanvas<EventSpec extends CanvasEvents = CanvasEvents>
       const parentMatrix = obj.group ? obj.group.calcTransformMatrix() : null;
 
       // 将textboxCoords从obj的局部坐标系转换到canvas的全局坐标系
-      const canvasTextboxCoords = textboxCoords.map(tbPoint => {
+      const canvasTextboxCoords = textboxCoords.map((tbPoint) => {
         // 将textbox的坐标点转换为canvas的坐标点
         let point = new Point(tbPoint.x, tbPoint.y);
         // 应用obj的变换矩阵
@@ -803,46 +803,43 @@ export class SelectableCanvas<EventSpec extends CanvasEvents = CanvasEvents>
       });
       coords = canvasTextboxCoords;
     }
+
+    // 获取当前视口的缩放比例
     const viewportZoom = this.getZoom();
+    // 根据缩放比例调整padding值
     const padding = obj.padding / viewportZoom;
+
+    // 如果存在padding，需要调整坐标
     if (padding) {
       const [tl, tr, br, bl] = coords;
-      // what is the angle of the object?
-      // we could use getTotalAngle, but is way easier to look at it
-      // from how coords are oriented, since if something went wrong
-      // at least we are consistent.
+      // 计算对象的旋转角度
       const angleRadians = Math.atan2(tr.y - tl.y, tr.x - tl.x),
         cosP = cos(angleRadians) * padding,
         sinP = sin(angleRadians) * padding,
         cosPSinP = cosP + sinP,
         cosPMinusSinP = cosP - sinP;
 
+      // 根据padding和角度调整后的新坐标
       coords = [
         new Point(tl.x - cosPMinusSinP, tl.y - cosPSinP),
         new Point(tr.x + cosPSinP, tr.y - cosPMinusSinP),
         new Point(br.x + cosPMinusSinP, br.y + cosPSinP),
         new Point(bl.x - cosPSinP, bl.y + cosPMinusSinP),
       ];
-      // in case of padding we calculate the new coords on the fly.
-      // otherwise we have to maintain 2 sets of coordinates for everything.
-      // we can reiterate on storing them.
-      // if this is slow, for now the semplification is large and doesn't impact
-      // rendering.
-      // the idea behind this is that outside target check we don't need ot know
-      // where those coords are
     }
+
+    // 使用Intersection工具检查点是否在多边形内
     return Intersection.isPointInPolygon(point, coords);
   }
 
   /**
-   * Checks point is inside the object selection condition. Either area with padding
-   * or over pixels if perPixelTargetFind is enabled
-   * @param {FabricObject} obj Object to test against
-   * @param {Object} [pointer] point from viewport.
-   * @return {Boolean} true if point is contained within an area of given object
-   * @private
+   * 检查目标对象是否可以被选中
+   * @param {FabricObject} obj 要检查的目标对象
+   * @param {Point} pointer 鼠标指针的位置
+   * @return {boolean} 如果目标可以被选中则返回true，否则返回false
    */
   _checkTarget(obj: FabricObject, pointer: Point): boolean {
+    // 检查对象是否存在、是否可见、是否可交互，以及指针是否在选择区域内
     if (
       obj &&
       obj.visible &&
@@ -852,17 +849,21 @@ export class SelectableCanvas<EventSpec extends CanvasEvents = CanvasEvents>
         sendPointToPlane(pointer, undefined, this.viewportTransform),
       )
     ) {
+      // 如果启用了逐像素目标查找（全局或对象级别），并且对象不是正在编辑的文本
       if (
         (this.perPixelTargetFind || obj.perPixelTargetFind) &&
         !(obj as unknown as IText).isEditing
       ) {
+        // 检查目标在指针位置是否不透明
         if (!this.isTargetTransparent(obj, pointer.x, pointer.y)) {
           return true;
         }
       } else {
+        // 如果没有启用逐像素目标查找，直接返回true
         return true;
       }
     }
+    // 如果以上条件都不满足，返回false
     return false;
   }
 
@@ -881,11 +882,15 @@ export class SelectableCanvas<EventSpec extends CanvasEvents = CanvasEvents>
     let i = objects.length; // 从数组末尾开始遍历
     // 不要检查当前分组的对象，因为我们检查的是父组本身
     // 除非我们专门调用此函数来搜索活动组内部
-    while (i--) { // 从后向前遍历对象数组
+    while (i--) {
+      // 从后向前遍历对象数组
       const target = objects[i]; // 获取当前对象
-      if (this._checkTarget(target, pointer)) { // 检查目标对象是否包含指针
-        if (isCollection(target) && target.subTargetCheck) { // 如果目标是集合且需要检查子目标
-          const subTarget = this._searchPossibleTargets( // 递归查找子目标
+      if (this._checkTarget(target, pointer)) {
+        // 检查目标对象是否包含指针
+        if (isCollection(target) && target.subTargetCheck) {
+          // 如果目标是集合且需要检查子目标
+          const subTarget = this._searchPossibleTargets(
+            // 递归查找子目标
             target._objects as FabricObject[],
             pointer,
           );
@@ -919,9 +924,11 @@ export class SelectableCanvas<EventSpec extends CanvasEvents = CanvasEvents>
     ) {
       /** targets[0] 是最内层的嵌套目标，但它可能在非交互组内，因此不是选择目标 */
       const targets = this.targets; // 保存当前目标数组
-      for (let i = targets.length - 1; i > 0; i--) { // 从后向前遍历目标数组
+      for (let i = targets.length - 1; i > 0; i--) {
+        // 从后向前遍历目标数组
         const t = targets[i];
-        if (!(isCollection(t) && t.interactive)) { // 如果某个子目标不是交互的
+        if (!(isCollection(t) && t.interactive)) {
+          // 如果某个子目标不是交互的
           // 其中一个子目标不是交互的。那就是我们可以返回的最后一个子目标。
           // 我们不能再深入查找；
           return t; // 返回最后一个可交互的子目标
@@ -1017,9 +1024,9 @@ export class SelectableCanvas<EventSpec extends CanvasEvents = CanvasEvents>
       boundsWidth === 0 || boundsHeight === 0
         ? new Point(1, 1)
         : new Point(
-          upperCanvasEl.width / boundsWidth,
-          upperCanvasEl.height / boundsHeight,
-        );
+            upperCanvasEl.width / boundsWidth,
+            upperCanvasEl.height / boundsHeight,
+          );
 
     return pointer.multiply(cssScale);
   }
@@ -1354,7 +1361,6 @@ export class SelectableCanvas<EventSpec extends CanvasEvents = CanvasEvents>
       this._activeObjects = [];
     }
   }
-
 
   /**
    * 绘制对象的控制元素（边框/控制点）

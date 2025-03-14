@@ -11,6 +11,7 @@ import type {
 } from '../EventTypeDefs';
 import { Point } from '../Point';
 import type { ActiveSelection } from '../shapes/ActiveSelection';
+import type { OlpShape } from '../shapes/Elements/OlpShape';
 import type { Group } from '../shapes/Group';
 import type { IText } from '../shapes/IText/IText';
 import type { FabricObject } from '../shapes/Object/FabricObject';
@@ -86,21 +87,21 @@ export class Canvas extends SelectableCanvas implements CanvasOptions {
    * @type number
    * @private
    */
-  private declare _willAddMouseDown: number;
+  declare private _willAddMouseDown: number;
 
   /**
    * Holds a reference to an object on the canvas that is receiving the drag over event.
    * @type FabricObject
    * @private
    */
-  private declare _draggedoverTarget?: FabricObject;
+  declare private _draggedoverTarget?: FabricObject;
 
   /**
    * Holds a reference to an object on the canvas from where the drag operation started
    * @type FabricObject
    * @private
    */
-  private declare _dragSource?: FabricObject;
+  declare private _dragSource?: FabricObject;
 
   /**
    * Holds a reference to an object on the canvas that is the current drop target
@@ -109,7 +110,7 @@ export class Canvas extends SelectableCanvas implements CanvasOptions {
    * @type FabricObject
    * @private
    */
-  private declare _dropTarget: FabricObject<ObjectEvents> | undefined;
+  declare private _dropTarget: FabricObject<ObjectEvents> | undefined;
 
   private _isClick: boolean;
 
@@ -894,7 +895,7 @@ export class Canvas extends SelectableCanvas implements CanvasOptions {
     ) {
       // 获取原始变换的控件对象
       const originalControl =
-        transform.target && transform.target.controls[transform.corner],
+          transform.target && transform.target.controls[transform.corner],
         // 获取原始控件的鼠标抬起处理程序
         originalMouseUpHandler =
           originalControl &&
@@ -970,16 +971,20 @@ export class Canvas extends SelectableCanvas implements CanvasOptions {
         transform: this._currentTransform,
         ...(eventType === 'up:before' || eventType === 'up'
           ? {
-            isClick: this._isClick,
-            currentTarget: this.findTarget(e),
-            // set by the preceding `findTarget` call
-            currentSubTargets: this.targets,
-          }
+              isClick: this._isClick,
+              currentTarget: this.findTarget(e),
+              // set by the preceding `findTarget` call
+              currentSubTargets: this.targets,
+            }
           : {}),
       } as CanvasEvents[`mouse:${T}`];
     this.fire(`mouse:${eventType}`, options);
     // this may be a little be more complicated of what we want to handle
     target && target.fire(`mouse${eventType}`, options);
+    if (target?.get('type') === 'olpshape') {
+      const textbox = (target as OlpShape)._objects[0];
+      textbox && textbox.fire(`mouse${eventType}`, options);
+    }
     for (let i = 0; i < targets.length; i++) {
       targets[i] !== target && targets[i].fire(`mouse${eventType}`, options);
     }
@@ -1062,12 +1067,14 @@ export class Canvas extends SelectableCanvas implements CanvasOptions {
       return; // 结束方法
     }
 
-    if (this.isDrawingMode) { // 如果处于绘图模式
+    if (this.isDrawingMode) {
+      // 如果处于绘图模式
       this._onMouseDownInDrawingMode(e); // 处理绘图模式下的鼠标按下事件
       return; // 结束方法
     }
 
-    if (!this._isMainEvent(e)) { // 检查是否为主要事件
+    if (!this._isMainEvent(e)) {
+      // 检查是否为主要事件
       return; // 结束方法
     }
 
@@ -1080,25 +1087,34 @@ export class Canvas extends SelectableCanvas implements CanvasOptions {
     let grouped = false; // 标记是否分组
     const ctrlKey = e.ctrlKey; // 检查是否按下 Ctrl 键
     const shiftKey = e.shiftKey; // 检查是否按下 Shift 键
-    const parentIsActive = target && target.parent && isCollection(target.parent) && this._activeObjects?.includes(target.parent)
-    if (target) { // 如果存在目标对象
-      if (ctrlKey || shiftKey) { // 如果按下 Ctrl 键
-        const isOnlyOneGroup = this._activeObjects?.filter((obj) => {
-          return obj !== target.parent && !obj.parent
-        }).length === 0
+    const parentIsActive =
+      target &&
+      target.parent &&
+      isCollection(target.parent) &&
+      this._activeObjects?.includes(target.parent);
+    if (target) {
+      // 如果存在目标对象
+      if (ctrlKey || shiftKey) {
+        // 如果按下 Ctrl 键
+        const isOnlyOneGroup =
+          this._activeObjects?.filter((obj) => {
+            return obj !== target.parent && !obj.parent;
+          }).length === 0;
         if (target.parent && parentIsActive && isOnlyOneGroup) {
-          this.checkboxActiveObjects(target)
+          this.checkboxActiveObjects(target);
         } else if (!parentIsActive || !isOnlyOneGroup || !target.parent) {
           shouldRender = true;
-          this._activeObjects = this._activeObjects?.filter((obj) => !obj.parent)
-          this.checkboxActiveObjects(target.parent || target)
+          this._activeObjects = this._activeObjects?.filter(
+            (obj) => !obj.parent,
+          );
+          this.checkboxActiveObjects(target.parent || target);
         }
       } else {
         if (target.parent) {
           if (parentIsActive) {
-            this._activeObjects = [target.parent, target]
+            this._activeObjects = [target.parent, target];
           } else {
-            this._activeObjects = [target.parent]
+            this._activeObjects = [target.parent];
           }
         } else {
           this._activeObjects = [target]; // 否则将当前目标设置为活动对象
@@ -1108,11 +1124,13 @@ export class Canvas extends SelectableCanvas implements CanvasOptions {
       this._activeObjects = []; // 如果没有目标，清空活动对象
     }
 
-    if (this.handleMultiSelection(e, target) || parentIsActive) { // 处理多选
+    if (this.handleMultiSelection(e, target) || parentIsActive) {
+      // 处理多选
       // target = this._activeObject; // 更新目标为当前活动对象
       grouped = true; // 标记为分组
       shouldRender = true; // 设置需要渲染
-    } else if (this._shouldClearSelection(e, target)) { // 检查是否需要清除选择
+    } else if (this._shouldClearSelection(e, target)) {
+      // 检查是否需要清除选择
       this.discardActiveObject(e); // 清除活动对象
     }
 
@@ -1126,7 +1144,8 @@ export class Canvas extends SelectableCanvas implements CanvasOptions {
           target !== this._activeObject))
     ) {
       const p = this.getScenePoint(e); // 获取鼠标在场景中的位置
-      this._groupSelector = { // 设置选择框
+      this._groupSelector = {
+        // 设置选择框
         x: p.x,
         y: p.y,
         deltaY: 0,
@@ -1134,16 +1153,20 @@ export class Canvas extends SelectableCanvas implements CanvasOptions {
       };
     }
 
-    if (target) { // 如果存在目标对象
+    if (target) {
+      // 如果存在目标对象
       const alreadySelected = target === this._activeObject; // 检查目标是否已被选中
-      if (target.selectable && target.activeOn === 'down') { // 如果目标可选择并在按下时激活
+      if (target.selectable && target.activeOn === 'down') {
+        // 如果目标可选择并在按下时激活
         this.setActiveObject(target, e); // 设置当前活动对象
       }
-      const handle = target.findControl( // 查找控制点
+      const handle = target.findControl(
+        // 查找控制点
         this.getViewportPoint(e),
         isTouchEvent(e),
       );
-      if (this._activeObjects?.includes(target)) { // 如果目标是当前活动对象且有控制点或未分组
+      if (this._activeObjects?.includes(target)) {
+        // 如果目标是当前活动对象且有控制点或未分组
         this._setupCurrentTransform(e, target, alreadySelected); // 设置当前变换
         const control = handle ? handle.control : undefined,
           pointer = this.getScenePoint(e), // 获取鼠标在场景中的位置
@@ -1169,11 +1192,13 @@ export class Canvas extends SelectableCanvas implements CanvasOptions {
   }
 
   checkboxActiveObjects(target: FabricObject) {
-    if (!this._activeObjects) { // 如果没有活动对象
+    if (!this._activeObjects) {
+      // 如果没有活动对象
       this._activeObjects = [target]; // 设置当前目标为活动对象
       return;
     }
-    if (this._activeObjects?.includes(target)) { // 如果目标已在活动对象中
+    if (this._activeObjects?.includes(target)) {
+      // 如果目标已在活动对象中
       this._activeObjects.splice(this._activeObjects.indexOf(target), 1); // 从活动对象中移除
     } else {
       this._activeObjects.push(target); // 否则添加到活动对象中
@@ -1189,15 +1214,16 @@ export class Canvas extends SelectableCanvas implements CanvasOptions {
   }
 
   /**
-  * 缓存事件处理过程中所需的常见信息
-  * @private
-  * @param {Event} e 触发事件的事件对象
-  */
+   * 缓存事件处理过程中所需的常见信息
+   * @private
+   * @param {Event} e 触发事件的事件对象
+   */
   _cacheTransformEventData(e: TPointerEvent) {
     // 重置以避免过时的缓存
     this._resetTransformEventData(); // 调用重置方法清空之前的缓存数据
     this._pointer = this.getViewportPoint(e); // 获取鼠标在视口中的位置并缓存
-    this._absolutePointer = sendPointToPlane( // 将视口坐标转换为绝对坐标
+    this._absolutePointer = sendPointToPlane(
+      // 将视口坐标转换为绝对坐标
       this._pointer,
       undefined,
       this.viewportTransform, // 使用当前的视口变换
@@ -1406,10 +1432,10 @@ export class Canvas extends SelectableCanvas implements CanvasOptions {
       //  both pointer and object should agree on every point
       localPointer = target.group
         ? sendPointToPlane(
-          scenePoint,
-          undefined,
-          target.group.calcTransformMatrix(),
-        )
+            scenePoint,
+            undefined,
+            target.group.calcTransformMatrix(),
+          )
         : scenePoint;
     transform.shiftKey = e.shiftKey;
     transform.altKey = !!this.centeredKey && e[this.centeredKey];
@@ -1453,8 +1479,8 @@ export class Canvas extends SelectableCanvas implements CanvasOptions {
     }
     let hoverCursor = target.hoverCursor || this.hoverCursor;
     const activeSelection = isActiveSelection(this._activeObject)
-      ? this._activeObject
-      : null,
+        ? this._activeObject
+        : null,
       // only show proper corner when group selection is not active
       corner =
         (!activeSelection || target.group !== activeSelection) &&
@@ -1511,15 +1537,17 @@ export class Canvas extends SelectableCanvas implements CanvasOptions {
       // 如果是 `ActiveSelection`，则我们希望从中移除 `target`
       (isAS ||
         (!target.isDescendantOf(activeObject) &&
-          !activeObject.isDescendantOf(target)) &&
-        // 目标接受选择
-        !target.onSelect({ e }) &&
-        // 确保我们没有点击控制点
-        !activeObject.getActiveControl())
+          !activeObject.isDescendantOf(target) &&
+          // 目标接受选择
+          !target.onSelect({ e }) &&
+          // 确保我们没有点击控制点
+          !activeObject.getActiveControl()))
     ) {
-      if (isAS) { // 如果活动对象是活动选择
+      if (isAS) {
+        // 如果活动对象是活动选择
         const prevActiveObjects = activeObject.getObjects(); // 获取活动选择中的所有对象
-        if (target === activeObject) { // 如果目标是活动选择本身
+        if (target === activeObject) {
+          // 如果目标是活动选择本身
           const pointer = this.getViewportPoint(e); // 获取指针位置
           target =
             // 首先在活动对象中查找要移除的目标
@@ -1532,7 +1560,8 @@ export class Canvas extends SelectableCanvas implements CanvasOptions {
             return false;
           }
         }
-        if (target.group === activeObject) { // 如果目标是活动选择的一部分
+        if (target.group === activeObject) {
+          // 如果目标是活动选择的一部分
           // 从活动选择中移除目标
           activeObject.remove(target);
           this._hoveredTarget = target; // 设置悬停目标
@@ -1550,7 +1579,8 @@ export class Canvas extends SelectableCanvas implements CanvasOptions {
           this._hoveredTargets = [...this.targets]; // 设置悬停目标数组
         }
         this._fireSelectionEvents(prevActiveObjects, e); // 触发选择事件
-      } else { // 如果活动对象不是活动选择
+      } else {
+        // 如果活动对象不是活动选择
         (activeObject as IText).isEditing &&
           (activeObject as IText).exitEditing(); // 如果活动对象是文本对象且正在编辑，则退出编辑模式
         // 将活动对象和目标添加到活动选择中，并将其设置为活动对象
@@ -1611,10 +1641,10 @@ export class Canvas extends SelectableCanvas implements CanvasOptions {
           : []
         : collectedObjects.length > 1
           ? collectedObjects
-            .filter((object) => !object.onSelect({ e }))
-            .reverse()
+              .filter((object) => !object.onSelect({ e }))
+              .reverse()
           : // `setActiveObject` will call `onSelect(collectedObjects[0])` in this case
-          collectedObjects;
+            collectedObjects;
 
     // set active object
     if (objects.length === 1) {
