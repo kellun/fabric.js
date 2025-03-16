@@ -51,8 +51,6 @@ import type { CanvasOptions } from './CanvasOptions';
 import { canvasDefaults } from './CanvasOptions';
 import { Intersection } from '../Intersection';
 import { isActiveSelection } from '../util/typeAssertions';
-import type { OlpShape } from '../shapes/Elements/OlpShape';
-import type { Textbox } from '../shapes/Textbox';
 
 /**
  * Canvas class
@@ -775,34 +773,35 @@ export class SelectableCanvas<EventSpec extends CanvasEvents = CanvasEvents>
    */
   private _pointIsInObjectSelectionArea(obj: FabricObject, point: Point) {
     // 获取对象的坐标，getCoords会自动处理组的嵌套
+    // TODO 当obj 为olpshape下的textbox时，textbox并没有作为olpshape的group，导致textbox.getCoords()有问题，需要调整
     let coords = obj.getCoords();
 
     // 检查对象是否是OlpShape类型
-    const isOlpShape = obj.get('type') === 'olpshape';
-    if (isOlpShape) {
-      // 通过textboxCoords计算obj.textbox相对于canvas的坐标
-      const textbox = (obj as OlpShape)._objects[0] as Textbox;
-      const textboxCoords = textbox.getCoords();
+    // const isOlpShape = obj.get('type') === 'olpshape';
+    // if (isOlpShape) {
+    //   // 通过textboxCoords计算obj.textbox相对于canvas的坐标
+    //   const textbox = (obj as OlpShape)._objects[0] as Textbox;
+    //   const textboxCoords = textbox.getCoords();
 
-      // 获取obj的变换矩阵
-      const objMatrix = obj.calcTransformMatrix();
-      // 获取obj的父级变换矩阵（如果有的话）
-      const parentMatrix = obj.group ? obj.group.calcTransformMatrix() : null;
+    //   // 获取obj的变换矩阵
+    //   const objMatrix = obj.calcTransformMatrix();
+    //   // 获取obj的父级变换矩阵（如果有的话）
+    //   const parentMatrix = obj.group ? obj.group.calcTransformMatrix() : null;
 
-      // 将textboxCoords从obj的局部坐标系转换到canvas的全局坐标系
-      const canvasTextboxCoords = textboxCoords.map((tbPoint) => {
-        // 将textbox的坐标点转换为canvas的坐标点
-        let point = new Point(tbPoint.x, tbPoint.y);
-        // 应用obj的变换矩阵
-        point = point.transform(objMatrix);
-        // 如果有父级变换矩阵，继续应用
-        if (parentMatrix) {
-          point = point.transform(parentMatrix);
-        }
-        return point;
-      });
-      coords = canvasTextboxCoords;
-    }
+    //   // 将textboxCoords从obj的局部坐标系转换到canvas的全局坐标系
+    //   const canvasTextboxCoords = textboxCoords.map((tbPoint) => {
+    //     // 将textbox的坐标点转换为canvas的坐标点
+    //     let point = new Point(tbPoint.x, tbPoint.y);
+    //     // 应用obj的变换矩阵
+    //     point = point.transform(objMatrix);
+    //     // 如果有父级变换矩阵，继续应用
+    //     if (parentMatrix) {
+    //       point = point.transform(parentMatrix);
+    //     }
+    //     return point;
+    //   });
+    //   coords = canvasTextboxCoords;
+    // }
 
     // 获取当前视口的缩放比例
     const viewportZoom = this.getZoom();

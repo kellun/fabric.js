@@ -111,7 +111,7 @@ interface UniqueTextProps {
 
 export interface SerializedTextProps
   extends SerializedObjectProps,
-  UniqueTextProps {
+    UniqueTextProps {
   styles: TextStyleArray | TextStyle;
 }
 
@@ -124,12 +124,13 @@ export interface TextProps extends FabricObjectProps, UniqueTextProps {
  * @tutorial {@link http://fabricjs.com/fabric-intro-part-2#text}
  */
 export class FabricText<
-  Props extends TOptions<TextProps> = Partial<TextProps>,
-  SProps extends SerializedTextProps = SerializedTextProps,
-  EventSpec extends ObjectEvents = ObjectEvents
->
+    Props extends TOptions<TextProps> = Partial<TextProps>,
+    SProps extends SerializedTextProps = SerializedTextProps,
+    EventSpec extends ObjectEvents = ObjectEvents,
+  >
   extends StyledText<Props, SProps, EventSpec>
-  implements UniqueTextProps {
+  implements UniqueTextProps
+{
   /**
    * Properties that requires a text layout recalculation when changed
    * @type string[]
@@ -451,35 +452,53 @@ export class FabricText<
   /**
    * @private
    * Divides text into lines of text and lines of graphemes.
+   * 将文本分割成文本行和字形行。
+   *
+   * @returns {TextLinesInfo} 包含分割后的文本行、字形行、字形文本和未换行文本行的信息对象。
    */
   _splitText(): TextLinesInfo {
+    // 调用 _splitTextIntoLines 方法将文本分割成不同的行和字形信息
     const newLines = this._splitTextIntoLines(this.text);
+    // 将分割后的文本行赋值给 textLines 属性
     this.textLines = newLines.lines;
+    // 将分割后的字形行赋值给 _textLines 属性
     this._textLines = newLines.graphemeLines;
+    // 将未换行的文本行赋值给 _unwrappedTextLines 属性
     this._unwrappedTextLines = newLines._unwrappedLines;
+    // 将分割后的字形文本赋值给 _text 属性
     this._text = newLines.graphemeText;
+    // 返回包含分割信息的对象
     return newLines;
   }
 
   /**
-   * Initialize or update text dimensions.
-   * Updates this.width and this.height with the proper values.
-   * Does not return dimensions.
+   * 初始化或更新文本的尺寸。
+   * 此方法会重新分割文本，清除缓存，标记对象为脏状态，然后根据是否有路径来计算文本的宽度和高度。
+   * 如果文本对齐方式为 'justify'，还会调整空格的宽度以实现两端对齐。
    */
   initDimensions() {
+    // 分割文本为行和字形
     this._splitText();
+    // 清除缓存的行宽、行高和字符边界框信息
     this._clearCache();
+    // 标记对象为脏状态，表明需要重新渲染
     this.dirty = true;
+    // 如果文本有路径
     if (this.path) {
+      // 将路径的宽度赋值给文本对象的宽度
       this.width = this.path.width;
+      // 将路径的高度赋值给文本对象的高度
       this.height = this.path.height;
     } else {
+      // 计算文本的宽度，取计算结果、光标宽度或最小文本宽度中的最大值
       this.width =
         this.calcTextWidth() || this.cursorWidth || this.MIN_TEXT_WIDTH;
+      // 计算文本的高度
       this.height = this.calcTextHeight();
     }
+    // 如果文本对齐方式包含 'justify'
     if (this.textAlign.includes(JUSTIFY)) {
-      // once text is measured we need to make space fatter to make justified text.
+      // 注释：一旦文本被测量，我们需要增大空格的宽度以实现两端对齐的文本效果
       this.enlargeSpaces();
     }
   }
@@ -578,8 +597,9 @@ export class FabricText<
    * @return {String} String representation of text object
    */
   toString(): string {
-    return `#<Text (${this.complexity()}): { "text": "${this.text
-      }", "fontFamily": "${this.fontFamily}" }>`;
+    return `#<Text (${this.complexity()}): { "text": "${
+      this.text
+    }", "fontFamily": "${this.fontFamily}" }>`;
   }
 
   /**
@@ -602,17 +622,27 @@ export class FabricText<
   }
 
   /**
-   * @private
-   * @param {CanvasRenderingContext2D} ctx Context to render on
+   * 在指定的画布上下文中渲染文本对象。
+   * 此方法会处理文本路径的渲染、文本样式的设置、文本行背景的渲染、文本装饰（下划线、上划线、删除线）的渲染以及文本内容的渲染。
+   *
+   * @param {CanvasRenderingContext2D} ctx - 用于渲染的画布上下文。
    */
   _render(ctx: CanvasRenderingContext2D) {
+    // 获取文本对象的路径
     const path = this.path;
+    // 如果路径存在且可见，则渲染路径
     path && !path.isNotVisible() && path._render(ctx);
+    // 设置文本的样式，如字体、字号、对齐方式等
     this._setTextStyles(ctx);
+    // 渲染文本行的背景
     this._renderTextLinesBackground(ctx);
+    // 渲染文本的下划线装饰
     this._renderTextDecoration(ctx, 'underline');
+    // 渲染文本内容，包括填充和描边
     this._renderText(ctx);
+    // 渲染文本的上划线装饰
     this._renderTextDecoration(ctx, 'overline');
+    // 渲染文本的删除线装饰
     this._renderTextDecoration(ctx, 'linethrough');
   }
 
@@ -643,7 +673,7 @@ export class FabricText<
   _setTextStyles(
     ctx: CanvasRenderingContext2D,
     charStyle?: any,
-    forMeasuring?: boolean
+    forMeasuring?: boolean,
   ) {
     ctx.textBaseline = 'alphabetic';
     if (this.path) {
@@ -663,20 +693,25 @@ export class FabricText<
   }
 
   /**
-   * calculate and return the text Width measuring each line.
-   * @private
-   * @param {CanvasRenderingContext2D} ctx Context to render on
-   * @return {Number} Maximum width of Text object
+   * 计算文本的总宽度，即所有行中最宽的行的宽度。
+   * 该方法会遍历文本的每一行，调用 `getLineWidth` 方法获取每行的宽度，并找出其中的最大值。
+   *
+   * @returns {number} - 文本的总宽度。
    */
   calcTextWidth(): number {
+    // 初始化最大宽度为第一行的宽度
     let maxWidth = this.getLineWidth(0);
 
+    // 遍历除第一行外的所有行
     for (let i = 1, len = this._textLines.length; i < len; i++) {
+      // 获取当前行的宽度
       const currentLineWidth = this.getLineWidth(i);
+      // 如果当前行的宽度大于最大宽度，则更新最大宽度
       if (currentLineWidth > maxWidth) {
         maxWidth = currentLineWidth;
       }
     }
+    // 返回最大宽度，即文本的总宽度
     return maxWidth;
   }
 
@@ -695,7 +730,7 @@ export class FabricText<
     line: string[],
     left: number,
     top: number,
-    lineIndex: number
+    lineIndex: number,
   ) {
     this._renderChars(method, ctx, line, left, top, lineIndex);
   }
@@ -743,7 +778,7 @@ export class FabricText<
               -charBox.width / 2,
               (-heightOfLine / this.lineHeight) * (1 - this._fontSizeFraction),
               charBox.width,
-              heightOfLine / this.lineHeight
+              heightOfLine / this.lineHeight,
             );
           ctx.restore();
         } else if (currentColor !== lastColor) {
@@ -757,7 +792,7 @@ export class FabricText<
               drawStart,
               lineTopOffset,
               boxWidth,
-              heightOfLine / this.lineHeight
+              heightOfLine / this.lineHeight,
             );
           boxStart = charBox.left;
           boxWidth = charBox.width;
@@ -776,7 +811,7 @@ export class FabricText<
           drawStart,
           lineTopOffset,
           boxWidth,
-          heightOfLine / this.lineHeight
+          heightOfLine / this.lineHeight,
         );
       }
       lineTopOffset += heightOfLine;
@@ -801,7 +836,7 @@ export class FabricText<
     _char: string,
     charStyle: CompleteTextStyleDeclaration,
     previousChar: string | undefined,
-    prevCharStyle: CompleteTextStyleDeclaration | Record<string, never>
+    prevCharStyle: CompleteTextStyleDeclaration | Record<string, never>,
   ) {
     const fontCache = cache.getFontCache(charStyle),
       fontDeclaration = this._getFontDeclaration(charStyle),
@@ -866,47 +901,64 @@ export class FabricText<
   }
 
   /**
-   * measure a text line measuring all characters.
-   * @param {Number} lineIndex line number
+   * 测量指定行的宽度。
+   * 该方法会调用 `_measureLine` 方法获取行的测量信息，并根据字符间距对宽度进行调整。
+   * 如果调整后的宽度小于 0，则将宽度设置为 0。
+   *
+   * @param {number} lineIndex - 要测量的行的索引。
+   * @returns {Object} - 包含测量信息的对象，至少包含 `width` 属性。
    */
   measureLine(lineIndex: number) {
+    // 调用 _measureLine 方法获取行的测量信息
     const lineInfo = this._measureLine(lineIndex);
+    // 如果字符间距不为 0，则从行宽中减去字符间距的宽度
     if (this.charSpacing !== 0) {
       lineInfo.width -= this._getWidthOfCharSpacing();
     }
+    // 如果行宽小于 0，则将行宽设置为 0
     if (lineInfo.width < 0) {
       lineInfo.width = 0;
     }
+    // 返回测量信息
     return lineInfo;
   }
 
   /**
-   * measure every grapheme of a line, populating __charBounds
-   * @param {Number} lineIndex
-   * @return {Object} object.width total width of characters
-   * @return {Object} object.numOfSpaces length of chars that match this._reSpacesAndTabs
+   * 测量指定行的文本宽度和字符信息。
+   * 此方法会遍历行中的每个字符，计算其宽度，并根据文本对齐方式和路径信息进行相应的处理。
+   *
+   * @param {number} lineIndex - 要测量的行的索引。
+   * @returns {{ width: number; numOfSpaces: number }} - 包含行的总宽度和空格数量的对象。
    */
   _measureLine(lineIndex: number) {
+    // 初始化变量，用于存储行的总宽度、前一个字符和当前字符的信息
     let width = 0,
       prevGrapheme: string | undefined,
       graphemeInfo: GraphemeBBox | undefined;
 
+    // 检查文本是否在路径的右侧，获取路径对象、当前行的字符数组和行的长度
     const reverse = this.pathSide === RIGHT,
       path = this.path,
       line = this._textLines[lineIndex],
       llength = line.length,
+      // 创建一个数组来存储当前行每个字符的边界框信息
       lineBounds = new Array<GraphemeBBox>(llength);
 
+    // 将当前行的边界框信息存储到 __charBounds 数组中
     this.__charBounds[lineIndex] = lineBounds;
+    // 遍历当前行的每个字符
     for (let i = 0; i < llength; i++) {
       const grapheme = line[i];
+      // 获取当前字符的边界框信息
       graphemeInfo = this._getGraphemeBox(grapheme, lineIndex, i, prevGrapheme);
+      // 将当前字符的边界框信息存储到 lineBounds 数组中
       lineBounds[i] = graphemeInfo;
+      // 累加当前字符的宽度到行的总宽度中
       width += graphemeInfo.kernedWidth;
+      // 更新前一个字符为当前字符
       prevGrapheme = grapheme;
     }
-    // this latest bound box represent the last character of the line
-    // to simplify cursor handling in interactive mode.
+    // 为了简化交互式模式下的光标处理，添加一个额外的边界框表示行的最后一个字符
     lineBounds[llength] = {
       left: graphemeInfo ? graphemeInfo.left + graphemeInfo.width : 0,
       width: 0,
@@ -914,10 +966,14 @@ export class FabricText<
       height: this.fontSize,
       deltaY: 0,
     } as GraphemeBBox;
+    // 如果文本有路径且路径有分段信息
     if (path && path.segmentsInfo) {
+      // 初始化路径上的位置
       let positionInPath = 0;
+      // 获取路径的总长度
       const totalPathLength =
         path.segmentsInfo[path.segmentsInfo.length - 1].length;
+      // 根据文本对齐方式计算路径上的起始位置
       switch (this.textAlign) {
         case LEFT:
           positionInPath = reverse ? totalPathLength - width : 0;
@@ -930,24 +986,29 @@ export class FabricText<
           break;
         //todo - add support for justify
       }
+      // 根据路径起始偏移量和方向调整路径上的位置
       positionInPath += this.pathStartOffset * (reverse ? -1 : 1);
+      // 根据文本是否在路径右侧决定遍历方向
       for (
         let i = reverse ? llength - 1 : 0;
         reverse ? i >= 0 : i < llength;
         reverse ? i-- : i++
       ) {
+        // 获取当前字符的边界框信息
         graphemeInfo = lineBounds[i];
+        // 处理路径位置超出或小于路径总长度的情况
         if (positionInPath > totalPathLength) {
           positionInPath %= totalPathLength;
         } else if (positionInPath < 0) {
           positionInPath += totalPathLength;
         }
-        // it would probably much faster to send all the grapheme position for a line
-        // and calculate path position/angle at once.
+        // 为当前字符设置路径上的位置和角度信息
         this._setGraphemeOnPath(positionInPath, graphemeInfo);
+        // 更新路径上的位置
         positionInPath += graphemeInfo.kernedWidth;
       }
     }
+    // 返回行的总宽度和空格数量
     return { width: width, numOfSpaces: 0 };
   }
 
@@ -983,7 +1044,7 @@ export class FabricText<
     lineIndex: number,
     charIndex: number,
     prevGrapheme?: string,
-    skipLeft?: boolean
+    skipLeft?: boolean,
   ): GraphemeBBox {
     const style = this.getCompleteStyleDeclaration(lineIndex, charIndex),
       prevStyle = prevGrapheme
@@ -1072,7 +1133,7 @@ export class FabricText<
    */
   _renderTextCommon(
     ctx: CanvasRenderingContext2D,
-    method: 'fillText' | 'strokeText'
+    method: 'fillText' | 'strokeText',
   ) {
     ctx.save();
     let lineHeights = 0;
@@ -1088,7 +1149,7 @@ export class FabricText<
         this._textLines[i],
         left + leftOffset,
         top + lineHeights + maxHeight,
-        i
+        i,
       );
       lineHeights += heightOfLine;
     }
@@ -1143,7 +1204,7 @@ export class FabricText<
     line: Array<any>,
     left: number,
     top: number,
-    lineIndex: number
+    lineIndex: number,
   ) {
     const lineHeight = this.getHeightOfLine(lineIndex),
       isJustify = this.textAlign.includes(JUSTIFY),
@@ -1215,7 +1276,7 @@ export class FabricText<
             i,
             charsToRender,
             -boxWidth / 2,
-            0
+            0,
           );
           ctx.restore();
         } else {
@@ -1227,7 +1288,7 @@ export class FabricText<
             i,
             charsToRender,
             drawingLeft,
-            top
+            top,
           );
         }
         charsToRender = '';
@@ -1277,7 +1338,7 @@ export class FabricText<
   handleFiller<T extends 'fill' | 'stroke'>(
     ctx: CanvasRenderingContext2D,
     property: `${T}Style`,
-    filler: TFiller | string
+    filler: TFiller | string,
   ): { offsetX: number; offsetY: number } {
     let offsetX: number, offsetY: number;
     if (isFiller(filler)) {
@@ -1319,7 +1380,7 @@ export class FabricText<
     {
       stroke,
       strokeWidth,
-    }: Pick<CompleteTextStyleDeclaration, 'stroke' | 'strokeWidth'>
+    }: Pick<CompleteTextStyleDeclaration, 'stroke' | 'strokeWidth'>,
   ) {
     ctx.lineWidth = strokeWidth;
     ctx.lineCap = this.strokeLineCap;
@@ -1358,7 +1419,7 @@ export class FabricText<
     charIndex: number,
     _char: string,
     left: number,
-    top: number
+    top: number,
   ) {
     const decl = this._getStyleDeclaration(lineIndex, charIndex),
       fullDecl = this.getCompleteStyleDeclaration(lineIndex, charIndex),
@@ -1385,7 +1446,7 @@ export class FabricText<
       ctx.fillText(
         _char,
         left - fillOffsets.offsetX,
-        top - fillOffsets.offsetY
+        top - fillOffsets.offsetY,
       );
     }
 
@@ -1394,7 +1455,7 @@ export class FabricText<
       ctx.strokeText(
         _char,
         left - strokeOffsets.offsetX,
-        top - strokeOffsets.offsetY
+        top - strokeOffsets.offsetY,
       );
     }
 
@@ -1432,13 +1493,13 @@ export class FabricText<
     schema: {
       size: number;
       baseline: number;
-    }
+    },
   ) {
     const loc = this.get2DCursorLocation(start, true),
       fontSize = this.getValueOfPropertyAt(
         loc.lineIndex,
         loc.charIndex,
-        'fontSize'
+        'fontSize',
       ),
       dy = this.getValueOfPropertyAt(loc.lineIndex, loc.charIndex, 'deltaY'),
       style = {
@@ -1507,19 +1568,25 @@ export class FabricText<
   }
 
   /**
-   * Measure a single line given its index. Used to calculate the initial
-   * text bounding box. The values are calculated and stored in __lineWidths cache.
-   * @private
-   * @param {Number} lineIndex line number
-   * @return {Number} Line width
+   * 获取指定行的宽度。
+   * 如果该行的宽度已经被计算过并缓存，直接返回缓存的值；
+   * 否则，调用 `measureLine` 方法计算该行的宽度，并将结果缓存起来。
+   *
+   * @param {number} lineIndex - 要获取宽度的行的索引。
+   * @returns {number} - 指定行的宽度。
    */
   getLineWidth(lineIndex: number): number {
+    // 检查该行的宽度是否已经被计算过并缓存
     if (this.__lineWidths[lineIndex] !== undefined) {
+      // 如果已经缓存，直接返回缓存的值
       return this.__lineWidths[lineIndex];
     }
 
+    // 如果未缓存，调用 measureLine 方法计算该行的宽度
     const { width } = this.measureLine(lineIndex);
+    // 将计算得到的宽度缓存起来
     this.__lineWidths[lineIndex] = width;
+    // 返回计算得到的宽度
     return width;
   }
 
@@ -1540,7 +1607,7 @@ export class FabricText<
   getValueOfPropertyAt<T extends StylePropertiesType>(
     lineIndex: number,
     charIndex: number,
-    property: T
+    property: T,
   ): this[T] {
     const charStyle = this._getStyleDeclaration(lineIndex, charIndex);
     return (charStyle[property] ?? this[property]) as this[T];
@@ -1552,7 +1619,7 @@ export class FabricText<
    */
   _renderTextDecoration(
     ctx: CanvasRenderingContext2D,
-    type: 'underline' | 'linethrough' | 'overline'
+    type: 'underline' | 'linethrough' | 'overline',
   ) {
     if (!this[type] && !this.styleHas(type)) {
       return;
@@ -1597,7 +1664,7 @@ export class FabricText<
             -charBox.kernedWidth / 2,
             offsetY * currentSize + currentDy,
             charBox.kernedWidth,
-            this.fontSize / 15
+            this.fontSize / 15,
           );
           ctx.restore();
         } else if (
@@ -1618,7 +1685,7 @@ export class FabricText<
               drawStart,
               top + offsetY * size + dy,
               boxWidth,
-              this.fontSize / 15
+              this.fontSize / 15,
             );
           }
           boxStart = charBox.left;
@@ -1642,7 +1709,7 @@ export class FabricText<
           drawStart,
           top + offsetY * size + dy,
           boxWidth - charSpacing,
-          this.fontSize / 15
+          this.fontSize / 15,
         );
       topOffset += heightOfLine;
     }
@@ -1668,13 +1735,13 @@ export class FabricText<
         'fontFamily' | 'fontStyle' | 'fontWeight' | 'fontSize'
       >
     > = {},
-    forMeasuring?: boolean
+    forMeasuring?: boolean,
   ): string {
     const parsedFontFamily =
       fontFamily.includes("'") ||
-        fontFamily.includes('"') ||
-        fontFamily.includes(',') ||
-        FabricText.genericFonts.includes(fontFamily.toLowerCase())
+      fontFamily.includes('"') ||
+      fontFamily.includes(',') ||
+      FabricText.genericFonts.includes(fontFamily.toLowerCase())
         ? fontFamily
         : `"${fontFamily}"`;
     return [
@@ -1686,13 +1753,19 @@ export class FabricText<
   }
 
   /**
-   * Renders text instance on a specified context
-   * @param {CanvasRenderingContext2D} ctx Context to render on
+   * 在指定的画布上下文中渲染文本对象。
+   * 此方法会先检查文本对象的可见性、是否在屏幕内以及是否需要强制清除缓存，
+   * 然后调用父类的 render 方法进行渲染。
+   *
+   * @param {CanvasRenderingContext2D} ctx - 用于渲染的画布上下文。
    */
   render(ctx: CanvasRenderingContext2D) {
+    // 检查文本对象是否可见，如果不可见则直接返回，不进行渲染
     if (!this.visible) {
       return;
     }
+    // 检查画布是否设置了跳过屏幕外对象的渲染，并且文本对象不在组内且不在屏幕内，
+    // 如果满足条件则直接返回，不进行渲染
     if (
       this.canvas &&
       this.canvas.skipOffscreen &&
@@ -1701,43 +1774,63 @@ export class FabricText<
     ) {
       return;
     }
+    // 检查是否需要强制清除缓存，如果需要则重新初始化文本对象的尺寸
     if (this._forceClearCache) {
       this.initDimensions();
     }
+    // 调用父类的 render 方法进行渲染
     super.render(ctx);
   }
 
   /**
    * Override this method to customize grapheme splitting
+   * 重写此方法以自定义字形分割逻辑
    * @todo the util `graphemeSplit` needs to be injectable in some way.
+   * 待办事项：工具函数 `graphemeSplit` 需要以某种方式可注入。
    * is more comfortable to inject the correct util rather than having to override text
-   * in the middle of the prototype chain
-   * @param {string} value
-   * @returns {string[]} array of graphemes
+   * 比起在原型链中间重写文本处理逻辑，注入正确的工具函数会更方便。
+   * @param {string} value 要进行字形分割的字符串
+   * @returns {string[]} array of graphemes 分割后的字形数组
    */
   graphemeSplit(value: string): string[] {
+    // 调用外部的 graphemeSplit 函数对传入的字符串进行字形分割
     return graphemeSplit(value);
   }
 
   /**
    * Returns the text as an array of lines.
-   * @param {String} text text to split
-   * @returns  Lines in the text
+   * 将文本分割成文本行和字形行的信息对象。
+   *
+   * @param {String} text text to split 需要分割的文本
+   * @returns  Lines in the text 返回包含分割后的文本行、字形行、字形文本和未换行文本行的信息对象
    */
   _splitTextIntoLines(text: string): TextLinesInfo {
+    // 使用正则表达式 _reNewline 分割文本为行
     const lines = text.split(this._reNewline),
+      // 创建一个新数组 newLines，用于存储每行的字形数组
       newLines = new Array<string[]>(lines.length),
+      // 定义一个换行符数组
       newLine = ['\n'];
+    // 初始化一个空数组，用于存储所有字形组成的文本
     let newText: string[] = [];
+    // 遍历分割后的每一行
     for (let i = 0; i < lines.length; i++) {
+      // 将当前行的文本分割成字形数组，并存储到 newLines 中
       newLines[i] = this.graphemeSplit(lines[i]);
+      // 将当前行的字形数组和换行符数组添加到 newText 中
       newText = newText.concat(newLines[i], newLine);
     }
+    // 移除 newText 末尾的换行符
     newText.pop();
+    // 返回包含分割信息的对象
     return {
+      // 未换行的文本行，存储每行的字形数组
       _unwrappedLines: newLines,
+      // 分割后的文本行
       lines: lines,
+      // 所有字形组成的文本
       graphemeText: newText,
+      // 每行的字形数组
       graphemeLines: newLines,
     };
   }
@@ -1749,7 +1842,7 @@ export class FabricText<
    */
   toObject<
     T extends Omit<Props & TClassProperties<this>, keyof SProps>,
-    K extends keyof T = never
+    K extends keyof T = never,
   >(propertiesToInclude: K[] = []): Pick<T, K> & SProps {
     return {
       ...super.toObject([...additionalProps, ...propertiesToInclude] as K[]),
@@ -1832,7 +1925,7 @@ export class FabricText<
     'font-size',
     'letter-spacing',
     'text-decoration',
-    'text-anchor'
+    'text-anchor',
   );
 
   /**
@@ -1845,12 +1938,12 @@ export class FabricText<
   static async fromElement(
     element: HTMLElement,
     options: Abortable,
-    cssRules?: CSSRules
+    cssRules?: CSSRules,
   ) {
     const parsedAttributes = parseAttributes(
       element,
       FabricText.ATTRIBUTE_NAMES,
-      cssRules
+      cssRules,
     );
 
     const {
@@ -1873,16 +1966,16 @@ export class FabricText<
     // this can later looked at again and probably removed.
 
     const text = new this(textContent, {
-      left: left + dx,
-      top: top + dy,
-      underline: textDecoration.includes('underline'),
-      overline: textDecoration.includes('overline'),
-      linethrough: textDecoration.includes('line-through'),
-      // we initialize this as 0
-      strokeWidth: 0,
-      fontSize,
-      ...restOfOptions,
-    }),
+        left: left + dx,
+        top: top + dy,
+        underline: textDecoration.includes('underline'),
+        overline: textDecoration.includes('overline'),
+        linethrough: textDecoration.includes('line-through'),
+        // we initialize this as 0
+        strokeWidth: 0,
+        fontSize,
+        ...restOfOptions,
+      }),
       textHeightScaleFactor = text.getScaledHeight() / text.height,
       lineHeightDiff =
         (text.height + text.strokeWidth) * text.lineHeight - text.height,
@@ -1906,7 +1999,7 @@ export class FabricText<
       top:
         text.top -
         (textHeight - text.fontSize * (0.07 + text._fontSizeFraction)) /
-        text.lineHeight,
+          text.lineHeight,
       strokeWidth,
     });
     return text;
@@ -1921,7 +2014,7 @@ export class FabricText<
    */
   static fromObject<
     T extends TOptions<SerializedTextProps>,
-    S extends FabricText
+    S extends FabricText,
   >(object: T) {
     return this._fromObject<S>(
       {
@@ -1930,7 +2023,7 @@ export class FabricText<
       },
       {
         extraParam: 'text',
-      }
+      },
     );
   }
 }

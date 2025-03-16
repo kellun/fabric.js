@@ -18,26 +18,34 @@ export const calcPlaneChangeMatrix = (
 ) => multiplyTransformMatrices(invertTransform(to), from);
 
 /**
- * Sends a point from the source coordinate plane to the destination coordinate plane.\
- * From the canvas/viewer's perspective the point remains unchanged.
+ * 将一个点从源坐标平面发送到目标坐标平面。
+ * 从画布/查看器的视角来看，该点保持不变。
  *
- * @example <caption>Send point from canvas plane to group plane</caption>
+ * @示例 <caption>将点从画布平面发送到组平面</caption>
  * var obj = new Rect({ left: 20, top: 20, width: 60, height: 60, strokeWidth: 0 });
  * var group = new Group([obj], { strokeWidth: 0 });
  * var sentPoint1 = sendPointToPlane(new Point(50, 50), undefined, group.calcTransformMatrix());
  * var sentPoint2 = sendPointToPlane(new Point(50, 50), iMatrix, group.calcTransformMatrix());
- * console.log(sentPoint1, sentPoint2) //  both points print (0,0) which is the center of group
+ * console.log(sentPoint1, sentPoint2) //  两个点都输出 (0,0)，这是组的中心
  *
- * @param {Point} point
- * @param {TMat2D} [from] plane matrix containing object. Passing `undefined` is equivalent to passing the identity matrix, which means `point` exists in the canvas coordinate plane.
- * @param {TMat2D} [to] destination plane matrix to contain object. Passing `undefined` means `point` should be sent to the canvas coordinate plane.
- * @returns {Point} transformed point
+ * @param {Point} point 要转换的点
+ * @param {TMat2D} [from] 包含对象的平面矩阵。传入 `undefined` 等同于传入单位矩阵，这意味着 `point` 存在于画布坐标平面中。
+ * @param {TMat2D} [to] 要包含对象的目标平面矩阵。传入 `undefined` 意味着 `point` 应该被发送到画布坐标平面。
+ * @returns {Point} 转换后的点
  */
 export const sendPointToPlane = (
+  // 要转换的点
   point: Point,
+  // 源平面的变换矩阵，默认为单位矩阵
   from: TMat2D = iMatrix,
+  // 目标平面的变换矩阵，默认为单位矩阵
   to: TMat2D = iMatrix,
-): Point => point.transform(calcPlaneChangeMatrix(from, to));
+): Point => {
+  // 计算平面变换矩阵
+  const planeChangeMatrix = calcPlaneChangeMatrix(from, to);
+  // 对指定点应用平面变换矩阵
+  return point.transform(planeChangeMatrix);
+};
 
 /**
  * See {@link sendPointToPlane}

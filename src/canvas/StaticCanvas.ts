@@ -51,13 +51,13 @@ import { getDevicePixelRatio } from '../env';
  */
 export type TCanvasSizeOptions =
   | {
-    backstoreOnly?: true;
-    cssOnly?: false;
-  }
+      backstoreOnly?: true;
+      cssOnly?: false;
+    }
   | {
-    backstoreOnly?: false;
-    cssOnly?: true;
-  };
+      backstoreOnly?: false;
+      cssOnly?: true;
+    };
 
 export type TSVGExportOptions = {
   suppressPreamble?: boolean;
@@ -84,11 +84,12 @@ export type TSVGExportOptions = {
  */
 // TODO: fix `EventSpec` inheritance https://github.com/microsoft/TypeScript/issues/26154#issuecomment-1366616260
 export class StaticCanvas<
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  EventSpec extends StaticCanvasEvents = StaticCanvasEvents,
->
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    EventSpec extends StaticCanvasEvents = StaticCanvasEvents,
+  >
   extends createCollectionMixin(CommonMethods<CanvasEvents>)
-  implements StaticCanvasOptions {
+  implements StaticCanvasOptions
+{
   declare width: number;
   declare height: number;
 
@@ -156,8 +157,8 @@ export class StaticCanvas<
   declare disposed?: boolean;
 
   declare _offset: { left: number; top: number };
-  protected declare hasLostContext: boolean;
-  protected declare nextRenderHandle: number;
+  declare protected hasLostContext: boolean;
+  declare protected nextRenderHandle: number;
 
   declare elements: StaticCanvasDOMManager;
 
@@ -168,12 +169,12 @@ export class StaticCanvas<
    * @type Boolean
    * @default false
    */
-  protected declare skipControlsDrawing: boolean;
+  declare protected skipControlsDrawing: boolean;
 
   static ownDefaults = staticCanvasDefaults;
 
   // reference to
-  protected declare __cleanupTask?: {
+  declare protected __cleanupTask?: {
     (): void;
     kill: (reason?: any) => void;
   };
@@ -229,7 +230,7 @@ export class StaticCanvas<
       log(
         'warn',
         'Canvas is trying to add an object that belongs to a different canvas.\n' +
-        'Resulting to default behavior: removing object from previous canvas and adding to new canvas',
+          'Resulting to default behavior: removing object from previous canvas and adding to new canvas',
       );
       obj.canvas.remove(obj);
     }
@@ -250,11 +251,12 @@ export class StaticCanvas<
   }
 
   /**
-   * @private
-   * @see https://developer.apple.com/library/safari/documentation/AudioVideo/Conceptual/HTML-canvas-guide/SettingUptheCanvas/SettingUptheCanvas.html
-   * @return {Number} retinaScaling if applied, otherwise 1;
+   * 获取视网膜缩放比例。
+   * 如果启用了视网膜缩放，则返回设备像素比；否则返回 1。
+   * @returns {number} 视网膜缩放比例。
    */
   getRetinaScaling() {
+    // 检查是否启用了视网膜缩放
     return this.enableRetinaScaling ? getDevicePixelRatio() : 1;
   }
 
@@ -559,7 +561,8 @@ export class StaticCanvas<
    * @param {Array} objects 要渲染的对象
    */
   renderCanvas(ctx: CanvasRenderingContext2D, objects: FabricObject[]) {
-    if (this.destroyed) { // 检查画布是否已被销毁
+    if (this.destroyed) {
+      // 检查画布是否已被销毁
       return; // 如果已销毁，直接返回
     }
 
@@ -578,10 +581,12 @@ export class StaticCanvas<
     ctx.transform(v[0], v[1], v[2], v[3], v[4], v[5]); // 应用视口变换
     this._renderObjects(ctx, objects); // 渲染对象
     ctx.restore(); // 恢复上下文状态
-    if (!this.controlsAboveOverlay && !this.skipControlsDrawing) { // 检查是否需要绘制控制元素
+    if (!this.controlsAboveOverlay && !this.skipControlsDrawing) {
+      // 检查是否需要绘制控制元素
       this.drawControls(ctx); // 绘制控制元素
     }
-    if (path) { // 如果存在剪切路径
+    if (path) {
+      // 如果存在剪切路径
       path._set('canvas', this); // 设置路径的画布属性
       // 需要设置几个变量
       // todo: 迁移到更新的版本
@@ -591,12 +596,14 @@ export class StaticCanvas<
       this.drawClipPathOnCanvas(ctx, path as TCachedFabricObject); // 在画布上绘制剪切路径
     }
     this._renderOverlay(ctx); // 渲染覆盖层
-    if (this.controlsAboveOverlay && !this.skipControlsDrawing) { // 检查是否需要绘制控制元素
+    if (this.controlsAboveOverlay && !this.skipControlsDrawing) {
+      // 检查是否需要绘制控制元素
       this.drawControls(ctx); // 绘制控制元素
     }
     this.fire('after:render', { ctx }); // 触发渲染后事件
 
-    if (this.__cleanupTask) { // 检查是否有清理任务
+    if (this.__cleanupTask) {
+      // 检查是否有清理任务
       this.__cleanupTask(); // 执行清理任务
       this.__cleanupTask = undefined; // 清除清理任务
     }
@@ -1221,14 +1228,18 @@ export class StaticCanvas<
           ? matrixToSVG(invertTransform(this.viewportTransform))
           : '';
       markup.push(
-        `<rect transform="${additionalTransform} translate(${finalWidth / 2},${finalHeight / 2
-        })" x="${filler.offsetX - finalWidth / 2}" y="${filler.offsetY - finalHeight / 2
-        }" width="${(repeat === 'repeat-y' || repeat === 'no-repeat') && isPattern(filler)
-          ? (filler.source as HTMLImageElement).width
-          : finalWidth
-        }" height="${(repeat === 'repeat-x' || repeat === 'no-repeat') && isPattern(filler)
-          ? (filler.source as HTMLImageElement).height
-          : finalHeight
+        `<rect transform="${additionalTransform} translate(${finalWidth / 2},${
+          finalHeight / 2
+        })" x="${filler.offsetX - finalWidth / 2}" y="${
+          filler.offsetY - finalHeight / 2
+        }" width="${
+          (repeat === 'repeat-y' || repeat === 'no-repeat') && isPattern(filler)
+            ? (filler.source as HTMLImageElement).width
+            : finalWidth
+        }" height="${
+          (repeat === 'repeat-x' || repeat === 'no-repeat') && isPattern(filler)
+            ? (filler.source as HTMLImageElement).height
+            : finalHeight
         }" fill="url(#SVGID_${filler.id})"></rect>\n`,
       );
     } else {
@@ -1523,7 +1534,8 @@ export class StaticCanvas<
    * @return {String} string representation of an instance
    */
   toString() {
-    return `#<Canvas (${this.complexity()}): { objects: ${this._objects.length
-      } }>`;
+    return `#<Canvas (${this.complexity()}): { objects: ${
+      this._objects.length
+    } }>`;
   }
 }
