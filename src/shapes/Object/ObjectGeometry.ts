@@ -44,9 +44,9 @@ type TACoords = TCornerPoint;
 export class ObjectGeometry<EventSpec extends ObjectEvents = ObjectEvents>
   extends CommonMethods<EventSpec>
   implements
-  Pick<ControlProps, 'padding'>,
-  BaseProps,
-  Pick<FillStrokeProps, 'strokeWidth' | 'strokeUniform'>
+    Pick<ControlProps, 'padding'>,
+    BaseProps,
+    Pick<FillStrokeProps, 'strokeWidth' | 'strokeUniform'>
 {
   // #region Geometry
 
@@ -476,32 +476,44 @@ export class ObjectGeometry<EventSpec extends ObjectEvents = ObjectEvents>
   }
 
   /**
-   * calculate transform matrix that represents the current transformations from the
-   * object's properties.
-   * @param {Boolean} [skipGroup] return transform matrix for object not counting parent transformations
-   * There are some situation in which this is useful to avoid the fake rotation.
-   * @return {TMat2D} transform matrix for the object
+   * 计算代表对象当前变换的变换矩阵。
+   * 此方法会根据对象的属性（如位置、缩放、旋转等）计算变换矩阵。
+   * 如果对象属于一个组，则可以选择是否包含组的变换。
+   *
+   * @param {boolean} [skipGroup=false] - 如果为 true，则返回不包含父组变换的对象变换矩阵。
+   *                                      在某些情况下，这有助于避免假旋转。
+   * @returns {TMat2D} - 对象的变换矩阵。
    */
   calcTransformMatrix(skipGroup = false): TMat2D {
+    // 首先计算对象自身的变换矩阵
     let matrix = this.calcOwnMatrix();
+    // 如果跳过组变换或者对象没有父组，则直接返回对象自身的变换矩阵
     if (skipGroup || !this.group) {
       return matrix;
     }
+    // 计算包含组变换的键，用于缓存检查
     const key = this.transformMatrixKey(skipGroup),
+      // 获取矩阵缓存
       cache = this.matrixCache;
+    // 检查缓存是否存在且键匹配
     if (cache && cache.key.every((x, i) => x === key[i])) {
+      // 如果缓存存在且键匹配，则返回缓存中的矩阵
       return cache.value;
     }
+    // 如果对象有父组，则将组的变换矩阵与对象自身的变换矩阵相乘
     if (this.group) {
       matrix = multiplyTransformMatrices(
+        // 计算父组的变换矩阵
         this.group.calcTransformMatrix(false),
         matrix,
       );
     }
+    // 更新矩阵缓存
     this.matrixCache = {
       key,
       value: matrix,
     };
+    // 返回最终的变换矩阵
     return matrix;
   }
 

@@ -43,7 +43,7 @@ import type { DrawContext } from './Object/Object';
  * This layout manager doesn't do anything and therefore keeps the exact layout the group had when {@link Group#toObject} was called.
  */
 class NoopLayoutManager extends LayoutManager {
-  performLayout() { }
+  performLayout() {}
 }
 
 export interface GroupEvents extends ObjectEvents, CollectionEvents {
@@ -58,7 +58,7 @@ export interface GroupOwnProps {
 
 export interface SerializedGroupProps
   extends SerializedObjectProps,
-  GroupOwnProps {
+    GroupOwnProps {
   objects: SerializedObjectProps[];
   layoutManager: SerializedLayoutManager;
 }
@@ -73,7 +73,7 @@ export const groupDefaultValues: Partial<TClassProperties<Group>> = {
   interactive: false,
   padding: 10,
   borderDashArray: [2, 2],
-  hoverCursor: 'default'
+  hoverCursor: 'default',
 };
 
 /**
@@ -86,7 +86,8 @@ export class Group
   extends createCollectionMixin(
     FabricObject<GroupProps, SerializedGroupProps, GroupEvents>,
   )
-  implements GroupProps {
+  implements GroupProps
+{
   /**
    * Used to optimize performance
    * set to `false` if you don't need contained objects to be targets of events
@@ -324,23 +325,40 @@ export class Group
   }
 
   /**
-   * keeps track of the selected objects
-   * @private
+   * 监控对象的选择状态变化，并相应地更新活动对象列表。
+   *
+   * @param {T} selected - 一个布尔值，表示对象是否被选中。
+   * @param {ObjectEvents[T extends true ? 'selected' : 'deselected']} param - 事件对象，包含目标对象。
+   * @param {FabricObject} param.target - 目标对象，即被选中或取消选中的对象。
+   *
+   * @template {boolean} T - 一个布尔类型的泛型，用于确定事件类型。
    */
   __objectSelectionMonitor<T extends boolean>(
+    // 表示对象是否被选中的布尔值
     selected: T,
+    // 根据 selected 的值，选择对应的事件对象类型
     {
       target: object,
     }: ObjectEvents[T extends true ? 'selected' : 'deselected'],
   ) {
+    // 获取当前组的活动对象数组
     const activeObjects = this._activeObjects;
+    // 如果对象被选中
     if (selected) {
+      // 将对象添加到活动对象数组中
       activeObjects.push(object);
+      // 标记组为脏状态，以便后续重新渲染
       this._set('dirty', true);
-    } else if (activeObjects.length > 0) {
+    }
+    // 如果对象被取消选中，并且活动对象数组不为空
+    else if (activeObjects.length > 0) {
+      // 查找对象在活动对象数组中的索引
       const index = activeObjects.indexOf(object);
+      // 如果找到了对象
       if (index > -1) {
+        // 从活动对象数组中移除该对象
         activeObjects.splice(index, 1);
+        // 标记组为脏状态，以便后续重新渲染
         this._set('dirty', true);
       }
     }
@@ -653,9 +671,9 @@ export class Group
    */
   getSvgStyles(): string {
     const opacity =
-      typeof this.opacity !== 'undefined' && this.opacity !== 1
-        ? `opacity: ${this.opacity};`
-        : '',
+        typeof this.opacity !== 'undefined' && this.opacity !== 1
+          ? `opacity: ${this.opacity};`
+          : '',
       visibility = this.visible ? '' : ' visibility: hidden;';
     return [opacity, this.getSvgFilter(), visibility].join('');
   }

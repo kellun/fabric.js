@@ -316,22 +316,27 @@ export function createCollectionMixin<TBase extends Constructor>(Base: TBase) {
     }
 
     /**
-     * Given a bounding box, return all the objects of the collection that are contained in the bounding box.
-     * If `includeIntersecting` is true, return also the objects that intersect the bounding box as well.
-     * This is meant to work with selection. Is not a generic method.
-     * @param {TBBox} bbox a bounding box in scene coordinates
-     * @param {{ includeIntersecting?: boolean }} options an object with includeIntersecting
-     * @returns array of objects contained in the bounding box, ordered from top to bottom stacking wise
+     * 根据给定的边界框收集集合中的对象。
+     * 此方法用于收集集合中位于指定边界框内或与之相交的对象。
+     * 如果 `includeIntersecting` 为 `true`，则还会收集与边界框相交的对象。
+     * 收集的对象按堆叠顺序从顶部到底部排列。
+     * @param {TBBox} param0 - 边界框对象，包含 `left`, `top`, `width`, `height` 属性。
+     * @param {Object} [options] - 可选参数对象。
+     * @param {boolean} [options.includeIntersecting=true] - 如果为 `true`，则包含与边界框相交的对象。
+     * @returns {InteractiveFabricObject[]} - 位于边界框内或与之相交的对象数组。
      */
     collectObjects(
       { left, top, width, height }: TBBox,
       { includeIntersecting = true }: { includeIntersecting?: boolean } = {},
     ) {
+      // 用于存储收集到的对象
       const objects: InteractiveFabricObject[] = [],
+        // 创建边界框的左上角点
         tl = new Point(left, top),
+        // 创建边界框的右下角点
         br = tl.add(new Point(width, height));
 
-      // we iterate reverse order to collect top first in case of click.
+      // 反向遍历对象数组，确保先收集顶部的对象
       for (let i = this._objects.length - 1; i >= 0; i--) {
         const object = this._objects[i] as unknown as InteractiveFabricObject;
         if (
