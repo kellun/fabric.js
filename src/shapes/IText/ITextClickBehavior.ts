@@ -185,7 +185,7 @@ export abstract class ITextClickBehavior<
     // 我们想要避免一个对象被选中后变为不可选择时，
     // 可能会以某种方式触发编辑模式。
     // this.selected = this === this.canvas._activeObject;
-    this.selected = this.canvas._activeObjects?.includes(this) === true;
+    this.selected = true;
   }
 
   /**

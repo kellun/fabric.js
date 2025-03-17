@@ -1155,7 +1155,7 @@ export class Canvas extends SelectableCanvas implements CanvasOptions {
 
     if (target) {
       // 如果存在目标对象
-      const alreadySelected = target === this._activeObject; // 检查目标是否已被选中
+      const alreadySelected = this._activeObjects?.includes(target); // 检查目标是否已被选中
       if (target.selectable && target.activeOn === 'down') {
         // 如果目标可选择并在按下时激活
         this.setActiveObject(target, e); // 设置当前活动对象

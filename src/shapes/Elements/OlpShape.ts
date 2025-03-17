@@ -1,24 +1,15 @@
 import { Path } from '../Path';
 import { classRegistry } from '../../ClassRegistry';
-import { Textbox, TextboxProps } from '../Textbox';
+import type { TextboxProps } from '../Textbox';
+import type { Textbox } from '../Textbox';
 import type { TOptions, TClassProperties } from '../../typedefs';
 import type { SerializedObjectProps } from '../Object/types';
-import { Group, GroupProps } from '../Group';
-import { DrawContext } from '../Object/Object';
-import {
-  LayoutManager,
-  LayoutStrategy,
-  LayoutStrategyResult,
-  StrictLayoutContext,
-} from '../../LayoutManager';
-import {
-  LAYOUT_TYPE_IMPERATIVE,
-  LAYOUT_TYPE_INITIALIZATION,
-} from '../../LayoutManager/constants';
-import { Point } from '../../Point';
-import { getObjectBounds } from '../../LayoutManager/LayoutStrategies/utils';
-import type { FabricObject } from '../../shapes/Object/FabricObject';
-import { makeBoundingBoxFromPoints } from '../../util/misc/boundingBoxFromPoints';
+import type { GroupProps } from '../Group';
+import { Group } from '../Group';
+import type { DrawContext } from '../Object/Object';
+import { LayoutManager } from '../../LayoutManager';
+import { OlpShapeLayoutStrategy } from './OlpShapeLayoutStrategy';
+import { OlpTextbox } from './OlpTextbox';
 
 // 扁平化默认值
 export const olpshapeDefaultValues: Partial<TClassProperties<OlpShape>> = {
@@ -33,6 +24,7 @@ export const olpshapeDefaultValues: Partial<TClassProperties<OlpShape>> = {
   textBodyBIns: 10,
   textAnchor: 'middleCenter',
   textFill: '#fff',
+  hoverCursor: 'move',
 };
 
 interface UniqueOlpShapeProps {
@@ -56,52 +48,6 @@ export interface OlpShapeProps
   extends GroupProps,
     Omit<TextboxProps, 'path'>,
     UniqueOlpShapeProps {}
-
-class OlpShapeLayoutStrategy extends LayoutStrategy {
-  static readonly type = 'olp-shape-strategy';
-  calcBoundingBox(
-    objects: FabricObject[],
-    context: StrictLayoutContext,
-  ): LayoutStrategyResult | undefined {
-    const { type, target } = context;
-    if (type === LAYOUT_TYPE_IMPERATIVE && context.overrides) {
-      return context.overrides;
-    }
-    if (objects.length === 0) {
-      return;
-    }
-
-    const { left, top, width, height } = makeBoundingBoxFromPoints(
-      [objects[0]]
-        .map((object) => getObjectBounds(target, object))
-        .reduce<Point[]>((coords, curr) => coords.concat(curr), []),
-    );
-    const bboxSize = new Point(width, height);
-    const bboxLeftTop = new Point(left, top);
-    const bboxCenter = bboxLeftTop.add(bboxSize.scalarDivide(2));
-
-    if (type === LAYOUT_TYPE_INITIALIZATION) {
-      const actualSize = this.getInitialSize(context, {
-        size: bboxSize,
-        center: bboxCenter,
-      });
-      return {
-        // in `initialization` we do not account for target's transformation matrix
-        center: bboxCenter,
-        // TODO: investigate if this is still necessary
-        relativeCorrection: new Point(0, 0),
-        size: actualSize,
-      };
-    } else {
-      //  we send `relativeCenter` up to group's containing plane
-      const center = bboxCenter.transform(target.calcOwnMatrix());
-      return {
-        center,
-        size: bboxSize,
-      };
-    }
-  }
-}
 
 export class OlpShape<
   Props extends TOptions<OlpShapeProps> = Partial<OlpShapeProps>,
@@ -137,6 +83,7 @@ export class OlpShape<
     const mergeOptions: any = {
       ...olpshapeDefaultValues,
       ...options,
+      hasBorders: false,
     };
     const { shapeType, shapeCustomPath, shapeViewBox, width, height } =
       mergeOptions;
@@ -166,8 +113,9 @@ export class OlpShape<
       hasBorders: false,
       interactive: false,
       strokeUniform: true,
+      evented: false,
     });
-    const textbox = new Textbox(mergeOptions.content, {
+    const textbox = new OlpTextbox(mergeOptions.content, {
       fontSize: mergeOptions.fontSize,
       textAlign: mergeOptions.textAlign,
       fill: mergeOptions.textFill,
@@ -182,7 +130,9 @@ export class OlpShape<
       hasControls: false,
       hasBorders: true,
       hoverCursor: 'text',
-      interactive: false,
+      interactive: true,
+      borderColor: 'orange',
+      wrap: mergeOptions.wrap,
       splitByGrapheme: mergeOptions.wrap,
     });
 
@@ -235,7 +185,7 @@ export class OlpShape<
   ) {
     this._renderBackground(ctx);
     this._render(ctx);
-    // this._drawClipPath(ctx, this.clipPath, context);
+    this._drawClipPath(ctx, this.clipPath, context);
   }
   _render(ctx: CanvasRenderingContext2D): void {
     this.dirty = true;
@@ -246,15 +196,8 @@ export class OlpShape<
     ctx.restore();
     ctx.save();
     const transform = ctx.getTransform();
-    const retinaScaling = this.canvas!.getRetinaScaling();
-    ctx.setTransform(
-      retinaScaling,
-      0,
-      0,
-      retinaScaling,
-      transform.e,
-      transform.f,
-    );
+    const vpt = this.getViewportTransform();
+    ctx.setTransform(vpt[0], 0, 0, vpt[3], transform.e, transform.f);
 
     const actualWidth = shape.width;
     const actualHeight = shape.height;

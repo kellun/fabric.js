@@ -41,9 +41,9 @@ interface UniqueTextboxProps {
 
 export interface SerializedTextboxProps
   extends SerializedITextProps,
-  Pick<UniqueTextboxProps, 'minWidth' | 'splitByGrapheme'> { }
+    Pick<UniqueTextboxProps, 'minWidth' | 'splitByGrapheme'> {}
 
-export interface TextboxProps extends ITextProps, UniqueTextboxProps { }
+export interface TextboxProps extends ITextProps, UniqueTextboxProps {}
 
 /**
  * Textbox class, based on IText, allows the user to resize the text rectangle
@@ -52,12 +52,13 @@ export interface TextboxProps extends ITextProps, UniqueTextboxProps { }
  * wrapping of lines.
  */
 export class Textbox<
-  Props extends TOptions<TextboxProps> = Partial<TextboxProps>,
-  SProps extends SerializedTextboxProps = SerializedTextboxProps,
-  EventSpec extends ITextEvents = ITextEvents,
->
+    Props extends TOptions<TextboxProps> = Partial<TextboxProps>,
+    SProps extends SerializedTextboxProps = SerializedTextboxProps,
+    EventSpec extends ITextEvents = ITextEvents,
+  >
   extends IText<Props, SProps, EventSpec>
-  implements UniqueTextboxProps {
+  implements UniqueTextboxProps
+{
   /**
    * Minimum width of textbox, in pixels.
    * @type Number
@@ -66,9 +67,9 @@ export class Textbox<
   declare minWidth: number;
 
   /**
-   * Minimum calculated width of a textbox, in pixels.
-   * fixed to 2 so that an empty textbox cannot go to 0
-   * and is still selectable without text.
+   * 文本框的最小计算宽度，单位为像素。
+   * 固定为 2，这样即使文本框为空，宽度也不会变为 0，
+   * 并且在没有文本的情况下仍然可以选择。
    * @type Number
    * @default
    */
@@ -87,11 +88,6 @@ export class Textbox<
   declare _styleMap: StyleMap;
 
   declare isWrapping: boolean;
-
-  /**
-   * 所属对象
-   */
-  declare belongsToObject: any;
 
   static type = 'Textbox';
 
@@ -236,7 +232,6 @@ export class Textbox<
       for (const p2 in obj[p1]) {
         const p2Number = parseInt(p2, 10);
         if (p2Number >= offset && (!shouldLimit || p2Number < nextOffset!)) {
-
           for (const p3 in obj[p1][p2]) {
             return false;
           }
@@ -317,13 +312,12 @@ export class Textbox<
   }
 
   /**
-   * Wraps text using the 'width' property of Textbox. First this function
-   * splits text on newlines, so we preserve newlines entered by the user.
-   * Then it wraps each line using the width of the Textbox by calling
-   * _wrapLine().
-   * @param {Array} lines The string array of text that is split into lines
-   * @param {Number} desiredWidth width you want to wrap to
-   * @returns {Array} Array of lines
+   * 使用Textbox的'width'属性对文本进行换行处理。
+   * 首先，该函数将文本按换行符分割，以保留用户输入的换行。
+   * 然后通过调用_wrapLine()方法，根据Textbox的宽度对每一行进行换行处理。
+   * @param {Array} lines 已按行分割的文本字符串数组
+   * @param {Number} desiredWidth 目标换行宽度
+   * @returns {Array} 返回换行后的文本数组，每个元素代表一行
    */
   _wrapText(lines: string[], desiredWidth: number): string[][] {
     this.isWrapping = true;
@@ -528,20 +522,24 @@ export class Textbox<
   }
 
   /**
-   * Gets lines of text to render in the Textbox. This function calculates
-   * text wrapping on the fly every time it is called.
-   * @param {String} text text to split
-   * @returns {Array} Array of lines in the Textbox.
-   * @override
+   * 将文本分割成多行显示
+   * @param {string} text 要分割的文本
+   * @returns {Object} 返回包含分割后文本信息的对象
    */
   _splitTextIntoLines(text: string) {
+    // 调用父类方法进行初步的文本分割
     const newText = super._splitTextIntoLines(text),
+      // 根据当前宽度对文本进行自动换行处理
       graphemeLines = this._wrapText(newText.lines, this.width),
+      // 创建与换行后行数相同的数组
       lines = new Array(graphemeLines.length);
+    // 将每行的字符数组连接成字符串
     for (let i = 0; i < graphemeLines.length; i++) {
       lines[i] = graphemeLines[i].join('');
     }
+    // 更新返回对象中的行信息
     newText.lines = lines;
+    // 保存字符级别的行信息
     newText.graphemeLines = graphemeLines;
     return newText;
   }
