@@ -99,10 +99,7 @@ export class OlpShape<
       scaleX = width / shapeViewBox[0];
       scaleY = height / shapeViewBox[1];
     }
-    const textboxMaxWidth =
-      mergeOptions.width * (mergeOptions.scaleX || 1) -
-      mergeOptions.textBodyLIns -
-      mergeOptions.textBodyRIns;
+
     const path = new Path(pathData, {
       ...options,
       scaleX,
@@ -116,13 +113,21 @@ export class OlpShape<
       evented: false,
     });
     const textbox = new OlpTextbox(mergeOptions.content, {
-      fontSize: mergeOptions.fontSize,
       textAlign: mergeOptions.textAlign,
-      fill: mergeOptions.textFill,
+      textAnchor: mergeOptions.textAnchor,
+      textBodyLIns: mergeOptions.textBodyLIns,
+      textBodyTIns: mergeOptions.textBodyTIns,
+      textBodyRIns: mergeOptions.textBodyRIns,
+      textBodyBIns: mergeOptions.textBodyBIns,
+      wrap: mergeOptions.wrap,
+      splitByGrapheme: mergeOptions.wrap,
+      // width:
+      //   mergeOptions.width -
+      //   mergeOptions.textBodyLIns -
+      //   mergeOptions.textBodyRIns,
       editable: true,
       left: 0,
       top: 0,
-      width: textboxMaxWidth,
       seletable: true,
       visible: true,
       lockMovementX: true,
@@ -132,8 +137,6 @@ export class OlpShape<
       hoverCursor: 'text',
       interactive: true,
       borderColor: 'orange',
-      wrap: mergeOptions.wrap,
-      splitByGrapheme: mergeOptions.wrap,
     });
 
     super([path, textbox], {
@@ -151,10 +154,8 @@ export class OlpShape<
     });
     Object.assign(this, mergeOptions);
     this.setOptions(options);
-
-    this.textboxMaxWidth = textboxMaxWidth;
-
     this.objectCaching = false;
+    textbox.initDimensions();
   }
 
   getPathOptions() {
@@ -194,75 +195,11 @@ export class OlpShape<
     ctx.save();
     shape.render(ctx);
     ctx.restore();
+
     ctx.save();
-    const transform = ctx.getTransform();
-    const vpt = this.getViewportTransform();
-    ctx.setTransform(vpt[0], 0, 0, vpt[3], transform.e, transform.f);
-
-    const actualWidth = shape.width;
-    const actualHeight = shape.height;
-    const halfWidth = actualWidth / 2;
-    const halfHeight = actualHeight / 2;
-    const textboxHalfWidth = textbox.width / 2;
-    const textboxHalfHeight = textbox.height / 2;
-
-    let left = 0;
-    let top = 0;
-    let width = textbox.width;
-    let splitByGrapheme = textbox.splitByGrapheme;
-
-    switch (this.textAnchor) {
-      case 'top':
-        left = this.setLeftPosition(textbox, halfWidth, textboxHalfWidth);
-        top = -halfHeight + this.textBodyTIns;
-        break;
-      case 'middle':
-        left = this.setLeftPosition(textbox, halfWidth, textboxHalfWidth);
-        top = -textboxHalfHeight;
-        break;
-      case 'bottom':
-        left = this.setLeftPosition(textbox, halfWidth, textboxHalfWidth);
-        top = halfHeight - textbox.height - this.textBodyBIns;
-        break;
-      case 'topCenter':
-        left = -textboxHalfWidth;
-        top = -halfHeight + this.textBodyTIns;
-        break;
-      case 'middleCenter':
-        left = -textboxHalfWidth;
-        top = -textboxHalfHeight;
-        break;
-      case 'bottomCenter':
-        left = -textboxHalfWidth;
-        top = halfHeight - textbox.height - this.textBodyBIns;
-        break;
-    }
-
-    if (this.wrap) {
-      width = this.textboxMaxWidth;
-      splitByGrapheme = true;
-    }
-    textbox.set({ left, top, width, splitByGrapheme });
-
     textbox.objectCaching = false;
     textbox.render(ctx);
     ctx.restore();
-  }
-
-  private setLeftPosition(
-    textbox: Textbox,
-    halfWidth: number,
-    textboxHalfWidth: number,
-  ): number {
-    let left = 0;
-    if (this.textAlign === 'center') {
-      left = -textboxHalfWidth;
-    } else if (this.textAlign === 'right') {
-      left = halfWidth - textbox.width - this.textBodyRIns;
-    } else {
-      left = -halfWidth + this.textBodyLIns;
-    }
-    return left;
   }
 }
 
