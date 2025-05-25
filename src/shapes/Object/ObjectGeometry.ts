@@ -487,6 +487,9 @@ export class ObjectGeometry<EventSpec extends ObjectEvents = ObjectEvents>
   calcTransformMatrix(skipGroup = false): TMat2D {
     // 首先计算对象自身的变换矩阵
     let matrix = this.calcOwnMatrix();
+    // console.log('this', this);
+    // console.log('matrix', matrix);
+    // console.log('skipGroup', skipGroup);
     // 如果跳过组变换或者对象没有父组，则直接返回对象自身的变换矩阵
     if (skipGroup || !this.group) {
       return matrix;

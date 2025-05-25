@@ -1480,12 +1480,14 @@ function createCollectionMixin(Base) {
     }
 
     /**
-     * Given a bounding box, return all the objects of the collection that are contained in the bounding box.
-     * If `includeIntersecting` is true, return also the objects that intersect the bounding box as well.
-     * This is meant to work with selection. Is not a generic method.
-     * @param {TBBox} bbox a bounding box in scene coordinates
-     * @param {{ includeIntersecting?: boolean }} options an object with includeIntersecting
-     * @returns array of objects contained in the bounding box, ordered from top to bottom stacking wise
+     * 根据给定的边界框收集集合中的对象。
+     * 此方法用于收集集合中位于指定边界框内或与之相交的对象。
+     * 如果 `includeIntersecting` 为 `true`，则还会收集与边界框相交的对象。
+     * 收集的对象按堆叠顺序从顶部到底部排列。
+     * @param {TBBox} param0 - 边界框对象，包含 `left`, `top`, `width`, `height` 属性。
+     * @param {Object} [options] - 可选参数对象。
+     * @param {boolean} [options.includeIntersecting=true] - 如果为 `true`，则包含与边界框相交的对象。
+     * @returns {InteractiveFabricObject[]} - 位于边界框内或与之相交的对象数组。
      */
     collectObjects(_ref) {
       let {
@@ -1497,11 +1499,14 @@ function createCollectionMixin(Base) {
       let {
         includeIntersecting = true
       } = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+      // 用于存储收集到的对象
       const objects = [],
+        // 创建边界框的左上角点
         tl = new Point(left, top),
+        // 创建边界框的右下角点
         br = tl.add(new Point(width, height));
 
-      // we iterate reverse order to collect top first in case of click.
+      // 反向遍历对象数组，确保先收集顶部的对象
       for (let i = this._objects.length - 1; i >= 0; i--) {
         const object = this._objects[i];
         if (object.selectable && object.visible && (includeIntersecting && object.intersectsWithRect(tl, br) || object.isContainedWithinRect(tl, br) || includeIntersecting && object.containsPoint(tl) || includeIntersecting && object.containsPoint(br))) {
@@ -3217,11 +3222,12 @@ let StaticCanvas$1 = class StaticCanvas extends createCollectionMixin(CommonMeth
   }
 
   /**
-   * @private
-   * @see https://developer.apple.com/library/safari/documentation/AudioVideo/Conceptual/HTML-canvas-guide/SettingUptheCanvas/SettingUptheCanvas.html
-   * @return {Number} retinaScaling if applied, otherwise 1;
+   * 获取视网膜缩放比例。
+   * 如果启用了视网膜缩放，则返回设备像素比；否则返回 1。
+   * @returns {number} 视网膜缩放比例。
    */
   getRetinaScaling() {
+    // 检查是否启用了视网膜缩放
     return this.enableRetinaScaling ? getDevicePixelRatio() : 1;
   }
 
@@ -3456,6 +3462,7 @@ let StaticCanvas$1 = class StaticCanvas extends createCollectionMixin(CommonMeth
    */
   requestRenderAll() {
     if (!this.nextRenderHandle && !this.disposed && !this.destroyed) {
+      console.log('requestRenderAll');
       this.nextRenderHandle = requestAnimFrame(() => this.renderAndReset());
     }
   }
@@ -3503,6 +3510,7 @@ let StaticCanvas$1 = class StaticCanvas extends createCollectionMixin(CommonMeth
    * @param {Array} objects 要渲染的对象
    */
   renderCanvas(ctx, objects) {
+    console.log('renderCanvas');
     if (this.destroyed) {
       // 检查画布是否已被销毁
       return; // 如果已销毁，直接返回
@@ -4509,25 +4517,28 @@ const calcPlaneChangeMatrix = function () {
 };
 
 /**
- * Sends a point from the source coordinate plane to the destination coordinate plane.\
- * From the canvas/viewer's perspective the point remains unchanged.
+ * 将一个点从源坐标平面发送到目标坐标平面。
+ * 从画布/查看器的视角来看，该点保持不变。
  *
- * @example <caption>Send point from canvas plane to group plane</caption>
+ * @示例 <caption>将点从画布平面发送到组平面</caption>
  * var obj = new Rect({ left: 20, top: 20, width: 60, height: 60, strokeWidth: 0 });
  * var group = new Group([obj], { strokeWidth: 0 });
  * var sentPoint1 = sendPointToPlane(new Point(50, 50), undefined, group.calcTransformMatrix());
  * var sentPoint2 = sendPointToPlane(new Point(50, 50), iMatrix, group.calcTransformMatrix());
- * console.log(sentPoint1, sentPoint2) //  both points print (0,0) which is the center of group
+ * console.log(sentPoint1, sentPoint2) //  两个点都输出 (0,0)，这是组的中心
  *
- * @param {Point} point
- * @param {TMat2D} [from] plane matrix containing object. Passing `undefined` is equivalent to passing the identity matrix, which means `point` exists in the canvas coordinate plane.
- * @param {TMat2D} [to] destination plane matrix to contain object. Passing `undefined` means `point` should be sent to the canvas coordinate plane.
- * @returns {Point} transformed point
+ * @param {Point} point 要转换的点
+ * @param {TMat2D} [from] 包含对象的平面矩阵。传入 `undefined` 等同于传入单位矩阵，这意味着 `point` 存在于画布坐标平面中。
+ * @param {TMat2D} [to] 要包含对象的目标平面矩阵。传入 `undefined` 意味着 `point` 应该被发送到画布坐标平面。
+ * @returns {Point} 转换后的点
  */
 const sendPointToPlane = function (point) {
   let from = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : iMatrix;
   let to = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : iMatrix;
-  return point.transform(calcPlaneChangeMatrix(from, to));
+  // 计算平面变换矩阵
+  const planeChangeMatrix = calcPlaneChangeMatrix(from, to);
+  // 对指定点应用平面变换矩阵
+  return point.transform(planeChangeMatrix);
 };
 
 /**
@@ -6507,30 +6518,46 @@ class ObjectGeometry extends CommonMethods {
   }
 
   /**
-   * calculate transform matrix that represents the current transformations from the
-   * object's properties.
-   * @param {Boolean} [skipGroup] return transform matrix for object not counting parent transformations
-   * There are some situation in which this is useful to avoid the fake rotation.
-   * @return {TMat2D} transform matrix for the object
+   * 计算代表对象当前变换的变换矩阵。
+   * 此方法会根据对象的属性（如位置、缩放、旋转等）计算变换矩阵。
+   * 如果对象属于一个组，则可以选择是否包含组的变换。
+   *
+   * @param {boolean} [skipGroup=false] - 如果为 true，则返回不包含父组变换的对象变换矩阵。
+   *                                      在某些情况下，这有助于避免假旋转。
+   * @returns {TMat2D} - 对象的变换矩阵。
    */
   calcTransformMatrix() {
     let skipGroup = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : false;
+    // 首先计算对象自身的变换矩阵
     let matrix = this.calcOwnMatrix();
+    // console.log('this', this);
+    // console.log('matrix', matrix);
+    // console.log('skipGroup', skipGroup);
+    // 如果跳过组变换或者对象没有父组，则直接返回对象自身的变换矩阵
     if (skipGroup || !this.group) {
       return matrix;
     }
+    // 计算包含组变换的键，用于缓存检查
     const key = this.transformMatrixKey(skipGroup),
+      // 获取矩阵缓存
       cache = this.matrixCache;
+    // 检查缓存是否存在且键匹配
     if (cache && cache.key.every((x, i) => x === key[i])) {
+      // 如果缓存存在且键匹配，则返回缓存中的矩阵
       return cache.value;
     }
+    // 如果对象有父组，则将组的变换矩阵与对象自身的变换矩阵相乘
     if (this.group) {
-      matrix = multiplyTransformMatrices(this.group.calcTransformMatrix(false), matrix);
+      matrix = multiplyTransformMatrices(
+      // 计算父组的变换矩阵
+      this.group.calcTransformMatrix(false), matrix);
     }
+    // 更新矩阵缓存
     this.matrixCache = {
       key,
       value: matrix
     };
+    // 返回最终的变换矩阵
     return matrix;
   }
 
@@ -6994,6 +7021,7 @@ let FabricObject$1 = class FabricObject extends ObjectGeometry {
   transform(ctx) {
     const needFullTransform = this.group && !this.group._transformDone || this.group && this.canvas && ctx === this.canvas.contextTop;
     const m = this.calcTransformMatrix(!needFullTransform);
+    console.log(this.type);
     ctx.transform(m[0], m[1], m[2], m[3], m[4], m[5]);
   }
 
@@ -9857,29 +9885,28 @@ classRegistry.setClass(FabricObject);
 classRegistry.setClass(FabricObject, 'object');
 
 /**
- * Returns true if context has transparent pixel
- * at specified location (taking tolerance into account)
- * @param {CanvasRenderingContext2D} ctx context
- * @param {Number} x x coordinate in canvasElementCoordinate, not fabric space. integer
- * @param {Number} y y coordinate in canvasElementCoordinate, not fabric space. integer
- * @param {Number} tolerance Tolerance pixels around the point, not alpha tolerance, integer
- * @return {boolean} true if transparent
+ * 判断指定位置的像素是否透明（考虑容差）
+ * @param {CanvasRenderingContext2D} ctx 画布上下文
+ * @param {Number} x x坐标（画布元素坐标系，非fabric空间，整数）
+ * @param {Number} y y坐标（画布元素坐标系，非fabric空间，整数）
+ * @param {Number} tolerance 容差范围（像素数，非透明度容差，整数）
+ * @return {boolean} 如果透明则返回true，否则返回false
  */
 const isTransparent = (ctx, x, y, tolerance) => {
-  tolerance = Math.round(tolerance);
-  const size = tolerance * 2 + 1;
+  tolerance = Math.round(tolerance); // 四舍五入容差值
+  const size = tolerance * 2 + 1; // 计算需要检查的区域大小
   const {
     data
-  } = ctx.getImageData(x - tolerance, y - tolerance, size, size);
+  } = ctx.getImageData(x - tolerance, y - tolerance, size, size); // 获取指定区域的图像数据
 
-  // Split image data - for tolerance > 1, pixelDataSize = 4;
+  // 遍历图像数据 - 对于容差 > 1 的情况，每个像素数据大小为4
   for (let i = 3; i < data.length; i += 4) {
-    const alphaChannel = data[i];
+    const alphaChannel = data[i]; // 获取当前像素的alpha通道值
     if (alphaChannel > 0) {
-      return false;
+      return false; // 如果发现不透明的像素，返回false
     }
   }
-  return true;
+  return true; // 所有像素都透明，返回true
 };
 
 /**
@@ -10350,55 +10377,77 @@ const escapeXml = string => string.replace(/&/g, '&amp;').replace(/"/g, '&quot;'
 
 /**
  * Divide a string in the user perceived single units
- * @param {String} textstring String to escape
+ * @param {String} textstring String to split into graphemes
  * @return {Array} array containing the graphemes
  */
 const graphemeSplit = textstring => {
+  // 用于存储分割后的字形单元
   const graphemes = [];
+  // 遍历字符串中的每个字符
   for (let i = 0, chr; i < textstring.length; i++) {
+    // 获取当前位置的完整字符
     if ((chr = getWholeChar(textstring, i)) === false) {
+      // 如果是低代理项，则跳过
       continue;
     }
+    // 将完整字符添加到字形数组中
     graphemes.push(chr);
   }
+  // 返回包含所有字形的数组
   return graphemes;
 };
 
 // taken from mdn in the charAt doc page.
+/**
+ * 获取字符串中指定位置的完整字符。
+ * 如果该位置是一个代理对的一部分，则返回整个代理对；否则返回该位置的单个字符。
+ * 如果该位置是低代理项，则返回 false。
+ *
+ * @param {string} str - 要从中获取字符的字符串。
+ * @param {number} i - 要获取字符的位置。
+ * @returns {string | boolean} - 如果找到完整字符，则返回该字符；如果是低代理项，则返回 false；如果位置无效，则返回空字符串。
+ * @throws {string} - 如果遇到孤立的高代理项或低代理项，则抛出错误。
+ */
 const getWholeChar = (str, i) => {
+  // 获取指定位置的字符编码
   const code = str.charCodeAt(i);
+  // 检查该位置是否存在字符
   if (isNaN(code)) {
-    return ''; // Position not found
+    return ''; // 位置未找到
   }
+  // 检查该字符是否不是代理对的一部分
   if (code < 0xd800 || code > 0xdfff) {
     return str.charAt(i);
   }
 
-  // High surrogate (could change last hex to 0xDB7F to treat high private
-  // surrogates as single characters)
+  // 高代理项 (可以将最后一个十六进制改为 0xDB7F 以将高私有代理项视为单个字符)
   if (0xd800 <= code && code <= 0xdbff) {
+    // 检查是否有后续的低代理项
     if (str.length <= i + 1) {
       throw 'High surrogate without following low surrogate';
     }
+    // 获取下一个字符的编码
     const next = str.charCodeAt(i + 1);
+    // 检查下一个字符是否为有效的低代理项
     if (0xdc00 > next || next > 0xdfff) {
       throw 'High surrogate without following low surrogate';
     }
+    // 返回高代理项和低代理项组成的字符串
     return str.charAt(i) + str.charAt(i + 1);
   }
-  // Low surrogate (0xDC00 <= code && code <= 0xDFFF)
+  // 低代理项 (0xDC00 <= code && code <= 0xDFFF)
   if (i === 0) {
     throw 'Low surrogate without preceding high surrogate';
   }
+  // 获取前一个字符的编码
   const prev = str.charCodeAt(i - 1);
 
-  // (could change last hex to 0xDB7F to treat high private
-  // surrogates as single characters)
+  // (可以将最后一个十六进制改为 0xDB7F 以将高私有代理项视为单个字符)
+  // 检查前一个字符是否为有效的高代理项
   if (0xd800 > prev || prev > 0xdbff) {
     throw 'Low surrogate without preceding high surrogate';
   }
-  // We can pass over low surrogates now as the second component
-  // in a pair which we have already processed
+  // 现在可以跳过低代理项，因为它是我们已经处理过的一对中的第二个组件
   return false;
 };
 
@@ -11447,7 +11496,8 @@ const groupDefaultValues = {
   subTargetCheck: false,
   interactive: false,
   padding: 10,
-  borderDashArray: [2, 2]
+  borderDashArray: [2, 2],
+  hoverCursor: 'default'
 };
 
 /**
@@ -11675,21 +11725,39 @@ class Group extends createCollectionMixin(FabricObject) {
   }
 
   /**
-   * keeps track of the selected objects
-   * @private
+   * 监控对象的选择状态变化，并相应地更新活动对象列表。
+   *
+   * @param {T} selected - 一个布尔值，表示对象是否被选中。
+   * @param {ObjectEvents[T extends true ? 'selected' : 'deselected']} param - 事件对象，包含目标对象。
+   * @param {FabricObject} param.target - 目标对象，即被选中或取消选中的对象。
+   *
+   * @template {boolean} T - 一个布尔类型的泛型，用于确定事件类型。
    */
-  __objectSelectionMonitor(selected, _ref) {
+  __objectSelectionMonitor(
+  // 表示对象是否被选中的布尔值
+  selected, // 根据 selected 的值，选择对应的事件对象类型
+  _ref) {
     let {
       target: object
     } = _ref;
+    // 获取当前组的活动对象数组
     const activeObjects = this._activeObjects;
+    // 如果对象被选中
     if (selected) {
+      // 将对象添加到活动对象数组中
       activeObjects.push(object);
+      // 标记组为脏状态，以便后续重新渲染
       this._set('dirty', true);
-    } else if (activeObjects.length > 0) {
+    }
+    // 如果对象被取消选中，并且活动对象数组不为空
+    else if (activeObjects.length > 0) {
+      // 查找对象在活动对象数组中的索引
       const index = activeObjects.indexOf(object);
+      // 如果找到了对象
       if (index > -1) {
+        // 从活动对象数组中移除该对象
         activeObjects.splice(index, 1);
+        // 标记组为脏状态，以便后续重新渲染
         this._set('dirty', true);
       }
     }
@@ -13605,31 +13673,28 @@ class SelectableCanvas extends StaticCanvas$1 {
   }
 
   /**
-   * Returns true if object is transparent at a certain location
-   * Clarification: this is `is target transparent at location X or are controls there`
-   * @TODO this seems dumb that we treat controls with transparency. we can find controls
-   * programmatically without painting them, the cache canvas optimization is always valid
-   * @param {FabricObject} target Object to check
-   * @param {Number} x Left coordinate in viewport space
-   * @param {Number} y Top coordinate in viewport space
-   * @return {Boolean}
+   * 检查目标对象在指定位置是否透明
+   * @param {FabricObject} target 要检查的目标对象
+   * @param {Number} x 视口空间中的左坐标
+   * @param {Number} y 视口空间中的顶部坐标
+   * @return {Boolean} 如果目标在指定位置透明则返回true，否则返回false
    */
   isTargetTransparent(target, x, y) {
-    const tolerance = this.targetFindTolerance;
-    const ctx = this.pixelFindContext;
-    this.clearContext(ctx);
-    ctx.save();
-    ctx.translate(-x + tolerance, -y + tolerance);
-    ctx.transform(...this.viewportTransform);
-    const selectionBgc = target.selectionBackgroundColor;
-    target.selectionBackgroundColor = '';
-    target.render(ctx);
-    target.selectionBackgroundColor = selectionBgc;
-    ctx.restore();
-    // our canvas is square, and made around tolerance.
-    // so tolerance in this case also represent the center of the canvas.
-    const enhancedTolerance = Math.round(tolerance * this.getRetinaScaling());
-    return isTransparent(ctx, enhancedTolerance, enhancedTolerance, enhancedTolerance);
+    const tolerance = this.targetFindTolerance; // 获取目标查找容差
+    const ctx = this.pixelFindContext; // 获取像素查找上下文
+    this.clearContext(ctx); // 清除上下文
+    ctx.save(); // 保存上下文状态
+    ctx.translate(-x + tolerance, -y + tolerance); // 平移上下文
+    ctx.transform(...this.viewportTransform); // 应用视口变换
+    const selectionBgc = target.selectionBackgroundColor; // 保存目标的选择背景色
+    target.selectionBackgroundColor = ''; // 临时清除选择背景色
+    target.render(ctx); // 渲染目标对象
+    target.selectionBackgroundColor = selectionBgc; // 恢复选择背景色
+    ctx.restore(); // 恢复上下文状态
+    // 我们的画布是正方形的，以容差为中心
+    // 所以在这种情况下，容差也代表画布的中心
+    const enhancedTolerance = Math.round(tolerance * this.getRetinaScaling()); // 计算增强的容差值
+    return isTransparent(ctx, enhancedTolerance, enhancedTolerance, enhancedTolerance); // 检查指定位置是否透明
   }
 
   /**
@@ -13749,7 +13814,6 @@ class SelectableCanvas extends StaticCanvas$1 {
       } // 如果需要中心变换，设置原点为中心
       : this._getOriginFromCorner(target, corner),
       // 否则从控制点获取原点
-
       /**
        * 相对于目标的包含坐标平面
        * 两者在每个点上都一致
@@ -13922,82 +13986,62 @@ class SelectableCanvas extends StaticCanvas$1 {
   }
 
   /**
-   * Checks if the point is inside the object selection area including padding
-   * @param {FabricObject} obj Object to test against
-   * @param {Object} [pointer] point in scene coordinates
-   * @return {Boolean} true if point is contained within an area of given object
-   * @private
+   * 检查点是否在对象的选择区域内（包括padding）
+   * @param {FabricObject} obj 要检查的对象
+   * @param {Point} point 场景坐标系中的点
+   * @return {Boolean} 如果点在对象的选择区域内返回true，否则返回false
    */
   _pointIsInObjectSelectionArea(obj, point) {
-    // getCoords will already take care of group de-nesting
+    // 获取对象的坐标，getCoords会自动处理组的嵌套
     let coords = obj.getCoords();
-    const isOlpShape = obj.get('type') === 'OlpShape';
-    if (isOlpShape) {
-      // 通过textboxCoords计算obj.textbox相对于canvas的坐标
-      const textboxCoords = obj.textbox.getCoords();
-
-      // 获取obj的变换矩阵
-      const objMatrix = obj.calcTransformMatrix();
-      // 获取obj的父级变换矩阵（如果有的话）
-      const parentMatrix = obj.group ? obj.group.calcTransformMatrix() : null;
-
-      // 将textboxCoords从obj的局部坐标系转换到canvas的全局坐标系
-      const canvasTextboxCoords = textboxCoords.map(tbPoint => {
-        // 将textbox的坐标点转换为canvas的坐标点
-        let point = new Point(tbPoint.x, tbPoint.y);
-        // 应用obj的变换矩阵
-        point = point.transform(objMatrix);
-        // 如果有父级变换矩阵，继续应用
-        if (parentMatrix) {
-          point = point.transform(parentMatrix);
-        }
-        return point;
-      });
-      coords = canvasTextboxCoords;
+    if (obj.get('type') === 'olpshape' && this._pointIsInObjectSelectionArea(obj._objects[1], point)) {
+      return true;
     }
+
+    // 获取当前视口的缩放比例
     const viewportZoom = this.getZoom();
+    // 根据缩放比例调整padding值
     const padding = obj.padding / viewportZoom;
+
+    // 如果存在padding，需要调整坐标
     if (padding) {
       const [tl, tr, br, bl] = coords;
-      // what is the angle of the object?
-      // we could use getTotalAngle, but is way easier to look at it
-      // from how coords are oriented, since if something went wrong
-      // at least we are consistent.
+      // 计算对象的旋转角度
       const angleRadians = Math.atan2(tr.y - tl.y, tr.x - tl.x),
         cosP = cos(angleRadians) * padding,
         sinP = sin(angleRadians) * padding,
         cosPSinP = cosP + sinP,
         cosPMinusSinP = cosP - sinP;
+
+      // 根据padding和角度调整后的新坐标
       coords = [new Point(tl.x - cosPMinusSinP, tl.y - cosPSinP), new Point(tr.x + cosPSinP, tr.y - cosPMinusSinP), new Point(br.x + cosPMinusSinP, br.y + cosPSinP), new Point(bl.x - cosPSinP, bl.y + cosPMinusSinP)];
-      // in case of padding we calculate the new coords on the fly.
-      // otherwise we have to maintain 2 sets of coordinates for everything.
-      // we can reiterate on storing them.
-      // if this is slow, for now the semplification is large and doesn't impact
-      // rendering.
-      // the idea behind this is that outside target check we don't need ot know
-      // where those coords are
     }
+
+    // 使用Intersection工具检查点是否在多边形内
     return Intersection.isPointInPolygon(point, coords);
   }
 
   /**
-   * Checks point is inside the object selection condition. Either area with padding
-   * or over pixels if perPixelTargetFind is enabled
-   * @param {FabricObject} obj Object to test against
-   * @param {Object} [pointer] point from viewport.
-   * @return {Boolean} true if point is contained within an area of given object
-   * @private
+   * 检查目标对象是否可以被选中
+   * @param {FabricObject} obj 要检查的目标对象
+   * @param {Point} pointer 鼠标指针的位置
+   * @return {boolean} 如果目标可以被选中则返回true，否则返回false
    */
   _checkTarget(obj, pointer) {
+    // 检查对象是否存在、是否可见、是否可交互，以及指针是否在选择区域内
     if (obj && obj.visible && obj.evented && this._pointIsInObjectSelectionArea(obj, sendPointToPlane(pointer, undefined, this.viewportTransform))) {
+      // 如果启用了逐像素目标查找（全局或对象级别），并且对象不是正在编辑的文本
       if ((this.perPixelTargetFind || obj.perPixelTargetFind) && !obj.isEditing) {
+        // 检查目标在指针位置是否不透明
         if (!this.isTargetTransparent(obj, pointer.x, pointer.y)) {
           return true;
         }
       } else {
+        // 如果没有启用逐像素目标查找，直接返回true
         return true;
       }
     }
+    // 如果以上条件都不满足，返回false
     return false;
   }
 
@@ -15215,86 +15259,137 @@ let Canvas$1 = class Canvas extends SelectableCanvas {
   }
 
   /**
-   * Method that defines the actions when mouse is released on canvas.
-   * The method resets the currentTransform parameters, store the image corner
-   * position in the image object and render the canvas on top.
-   * @private
-   * @param {Event} e Event object fired on mouseup
+   * 处理鼠标抬起事件的方法。
+   * 该方法会根据当前的画布状态和鼠标事件执行不同的操作，
+   * 例如完成当前变换、处理选择操作、调用控件的鼠标抬起处理程序等，
+   * 最后根据情况渲染画布。
+   *
+   * @param {TPointerEvent} e - 触发的鼠标抬起事件对象。
    */
   __onMouseUp(e) {
     var _this$_activeObject;
+    // 缓存事件处理过程中所需的常见信息
     this._cacheTransformEventData(e);
+    // 触发 'up:before' 事件
     this._handleEvent(e, 'up:before');
+
+    // 获取当前的变换对象
     const transform = this._currentTransform;
+    // 判断是否为点击操作
     const isClick = this._isClick;
+    // 获取当前的目标对象
     const target = this._target;
 
-    // if right/middle click just fire events and return
-    // target undefined will make the _handleEvent search the target
+    // 如果是右键或中键点击，仅触发事件并返回
+    // 若 target 为 undefined，_handleEvent 会自动查找目标对象
     const {
       button
     } = e;
     if (button) {
-      (this.fireMiddleClick && button === 1 || this.fireRightClick && button === 2) && this._handleEvent(e, 'up');
+      // 如果启用了中键点击事件且按下的是中键，或者启用了右键点击事件且按下的是右键
+      (this.fireMiddleClick && button === 1 || this.fireRightClick && button === 2) &&
+      // 触发 'up' 事件
+      this._handleEvent(e, 'up');
+      // 重置事件处理过程中缓存的变换数据
       this._resetTransformEventData();
       return;
     }
+
+    // 如果处于绘图模式且正在绘图
     if (this.isDrawingMode && this._isCurrentlyDrawing) {
+      // 调用绘图模式下的鼠标抬起处理方法
       this._onMouseUpInDrawingMode(e);
       return;
     }
+
+    // 如果当前事件不是主事件，则不进行后续处理
     if (!this._isMainEvent(e)) {
       return;
     }
+    // 标记是否需要渲染画布
     let shouldRender = false;
+    // 如果存在变换操作
     if (transform) {
+      // 完成当前的变换操作
       this._finalizeCurrentTransform(e);
+      // 根据变换操作是否执行来决定是否需要渲染画布
       shouldRender = transform.actionPerformed;
     }
+    // 如果不是点击操作
     if (!isClick) {
+      // 标记目标对象之前是否为活动对象
       const targetWasActive = target === this._activeObject;
+      // 处理选择操作
       this.handleSelection(e);
+      // 如果之前不需要渲染画布
       if (!shouldRender) {
+        // 根据目标对象的状态和选择情况决定是否需要渲染画布
         shouldRender = this._shouldRender(target) || !targetWasActive && target === this._activeObject;
       }
     }
+    // 定义指针和角点变量
     let pointer, corner;
+    // 如果存在目标对象
     if (target) {
+      // 在目标对象上查找当前鼠标位置对应的控件
       const found = target.findControl(this.getViewportPoint(e), isTouchEvent(e));
+      // 解构获取控件的键和控件对象
       const {
         key,
         control
       } = found || {};
+      // 记录角点信息
       corner = key;
+      // 如果目标对象可选择，不是当前活动对象，且激活条件为鼠标抬起
       if (target.selectable && target !== this._activeObject && target.activeOn === 'up') {
+        // 设置目标对象为活动对象
         this.setActiveObject(target, e);
+        // 标记需要渲染画布
         shouldRender = true;
-      } else if (control) {
+      }
+      // 如果找到对应的控件
+      else if (control) {
+        // 获取控件的鼠标抬起处理程序
         const mouseUpHandler = control.getMouseUpHandler(e, target, control);
         if (mouseUpHandler) {
+          // 获取鼠标在场景中的位置
           pointer = this.getScenePoint(e);
+          // 调用鼠标抬起处理程序
           mouseUpHandler.call(control, e, transform, pointer.x, pointer.y);
         }
       }
+      // 标记目标对象停止移动
       target.isMoving = false;
     }
-    // if we are ending up a transform on a different control or a new object
-    // fire the original mouse up from the corner that started the transform
+    // 如果结束变换时，目标对象或角点发生了变化
     if (transform && (transform.target !== target || transform.corner !== corner)) {
+      // 获取原始变换的控件对象
       const originalControl = transform.target && transform.target.controls[transform.corner],
+        // 获取原始控件的鼠标抬起处理程序
         originalMouseUpHandler = originalControl && originalControl.getMouseUpHandler(e, transform.target, originalControl);
+      // 获取鼠标在场景中的位置
       pointer = pointer || this.getScenePoint(e);
+      // 如果存在原始鼠标抬起处理程序，则调用该程序
       originalMouseUpHandler && originalMouseUpHandler.call(originalControl, e, transform, pointer.x, pointer.y);
     }
+    // 根据鼠标事件和目标对象设置光标样式
     this._setCursorFromEvent(e, target);
+    // 触发 'up' 事件
     this._handleEvent(e, 'up');
+    // 清空多选框选择器
     this._groupSelector = null;
+    // 清空当前的变换对象
     this._currentTransform = null;
-    // reset the target information about which corner is selected
+    // 重置目标对象的角点选择信息
     target && (target.__corner = undefined);
+    // 如果需要渲染画布
     if (shouldRender) {
+      // 请求渲染整个画布
       this.requestRenderAll();
-    } else if (!isClick && !((_this$_activeObject = this._activeObject) !== null && _this$_activeObject !== void 0 && _this$_activeObject.isEditing)) {
+    }
+    // 如果不是点击操作，且活动对象不是正在编辑的文本对象
+    else if (!isClick && !((_this$_activeObject = this._activeObject) !== null && _this$_activeObject !== void 0 && _this$_activeObject.isEditing)) {
+      // 仅渲染顶部画布
       this.renderTop();
     }
   }
@@ -15335,6 +15430,10 @@ let Canvas$1 = class Canvas extends SelectableCanvas {
     this.fire("mouse:".concat(eventType), options);
     // this may be a little be more complicated of what we want to handle
     target && target.fire("mouse".concat(eventType), options);
+    if ((target === null || target === void 0 ? void 0 : target.get('type')) === 'olpshape') {
+      const textbox = target._objects[0];
+      textbox && textbox.fire("mouse".concat(eventType), options);
+    }
     for (let i = 0; i < targets.length; i++) {
       targets[i] !== target && targets[i].fire("mouse".concat(eventType), options);
     }
@@ -15437,7 +15536,6 @@ let Canvas$1 = class Canvas extends SelectableCanvas {
       return; // 结束方法
     }
     let shouldRender = this._shouldRender(target); // 检查是否需要渲染
-    let grouped = false; // 标记是否分组
     const ctrlKey = e.ctrlKey; // 检查是否按下 Ctrl 键
     const shiftKey = e.shiftKey; // 检查是否按下 Shift 键
     const parentIsActive = target && target.parent && isCollection(target.parent) && ((_this$_activeObjects = this._activeObjects) === null || _this$_activeObjects === void 0 ? void 0 : _this$_activeObjects.includes(target.parent));
@@ -15472,9 +15570,6 @@ let Canvas$1 = class Canvas extends SelectableCanvas {
       this._activeObjects = []; // 如果没有目标，清空活动对象
     }
     if (this.handleMultiSelection(e, target) || parentIsActive) {
-      // 处理多选
-      // target = this._activeObject; // 更新目标为当前活动对象
-      grouped = true; // 标记为分组
       shouldRender = true; // 设置需要渲染
     } else if (this._shouldClearSelection(e, target)) {
       // 检查是否需要清除选择
@@ -15494,8 +15589,9 @@ let Canvas$1 = class Canvas extends SelectableCanvas {
       };
     }
     if (target) {
+      var _this$_activeObjects4, _this$_activeObjects5;
       // 如果存在目标对象
-      const alreadySelected = target === this._activeObject; // 检查目标是否已被选中
+      const alreadySelected = (_this$_activeObjects4 = this._activeObjects) === null || _this$_activeObjects4 === void 0 ? void 0 : _this$_activeObjects4.includes(target); // 检查目标是否已被选中
       if (target.selectable && target.activeOn === 'down') {
         // 如果目标可选择并在按下时激活
         this.setActiveObject(target, e); // 设置当前活动对象
@@ -15503,9 +15599,9 @@ let Canvas$1 = class Canvas extends SelectableCanvas {
       const handle = target.findControl(
       // 查找控制点
       this.getViewportPoint(e), isTouchEvent(e));
-      if (target === this._activeObject && (handle || !grouped)) {
+      if ((_this$_activeObjects5 = this._activeObjects) !== null && _this$_activeObjects5 !== void 0 && _this$_activeObjects5.includes(target)) {
         // 如果目标是当前活动对象且有控制点或未分组
-        this._setupCurrentTransform(e, target, alreadySelected); // 设置当前变换
+        this._setupCurrentTransform(e, target, !!alreadySelected); // 设置当前变换
         const control = handle ? handle.control : undefined,
           pointer = this.getScenePoint(e),
           // 获取鼠标在场景中的位置
@@ -15522,13 +15618,13 @@ let Canvas$1 = class Canvas extends SelectableCanvas {
     shouldRender && this.requestRenderAll(); // 请求重新渲染所有内容
   }
   checkboxActiveObjects(target) {
-    var _this$_activeObjects4;
+    var _this$_activeObjects6;
     if (!this._activeObjects) {
       // 如果没有活动对象
       this._activeObjects = [target]; // 设置当前目标为活动对象
       return;
     }
-    if ((_this$_activeObjects4 = this._activeObjects) !== null && _this$_activeObjects4 !== void 0 && _this$_activeObjects4.includes(target)) {
+    if ((_this$_activeObjects6 = this._activeObjects) !== null && _this$_activeObjects6 !== void 0 && _this$_activeObjects6.includes(target)) {
       // 如果目标已在活动对象中
       this._activeObjects.splice(this._activeObjects.indexOf(target), 1); // 从活动对象中移除
     } else {
@@ -15545,10 +15641,10 @@ let Canvas$1 = class Canvas extends SelectableCanvas {
   }
 
   /**
-  * 缓存事件处理过程中所需的常见信息
-  * @private
-  * @param {Event} e 触发事件的事件对象
-  */
+   * 缓存事件处理过程中所需的常见信息
+   * @private
+   * @param {Event} e 触发事件的事件对象
+   */
   _cacheTransformEventData(e) {
     // 重置以避免过时的缓存
     this._resetTransformEventData(); // 调用重置方法清空之前的缓存数据
@@ -15562,42 +15658,68 @@ let Canvas$1 = class Canvas extends SelectableCanvas {
   }
 
   /**
-   * Method that defines the actions when mouse is hovering the canvas.
-   * The currentTransform parameter will define whether the user is rotating/scaling/translating
-   * an image or neither of them (only hovering). A group selection is also possible and would cancel
-   * all any other type of action.
-   * In case of an image transformation only the top canvas will be rendered.
-   * @private
-   * @param {Event} e Event object fired on mousemove
+   * 处理鼠标移动事件的方法。
+   * 该方法会根据当前的画布状态和鼠标位置执行不同的操作，
+   * 例如在绘图模式下处理鼠标移动、绘制多选框、设置光标样式、触发对象变换等。
+   *
+   * @param {TPointerEvent} e - 触发的鼠标移动事件对象。
    */
   __onMouseMove(e) {
+    // 标记当前操作不是点击操作
     this._isClick = false;
+    // 缓存事件处理过程中所需的常见信息
     this._cacheTransformEventData(e);
+    // 触发 'move:before' 事件
     this._handleEvent(e, 'move:before');
+
+    // 如果处于绘图模式
     if (this.isDrawingMode) {
+      // 调用绘图模式下的鼠标移动处理方法
       this._onMouseMoveInDrawingMode(e);
+      // 处理完绘图模式的鼠标移动后，直接返回
       return;
     }
+
+    // 如果当前事件不是主事件，则不进行后续处理
     if (!this._isMainEvent(e)) {
       return;
     }
+
+    // 获取多选框选择器对象
     const groupSelector = this._groupSelector;
 
-    // We initially clicked in an empty area, so we draw a box for multiple selection
+    // 如果多选框选择器存在，说明最初点击在空白区域，需要绘制多选框
     if (groupSelector) {
+      // 获取鼠标在场景中的位置
       const pointer = this.getScenePoint(e);
+
+      // 计算多选框在 x 轴上的偏移量
       groupSelector.deltaX = pointer.x - groupSelector.x;
+      // 计算多选框在 y 轴上的偏移量
       groupSelector.deltaY = pointer.y - groupSelector.y;
+
+      // 渲染顶部画布
       this.renderTop();
-    } else if (!this._currentTransform) {
+    }
+    // 如果当前没有正在进行的变换操作
+    else if (!this._currentTransform) {
+      // 查找鼠标下方的目标对象
       const target = this.findTarget(e);
+      // 根据鼠标事件和目标对象设置光标样式
       this._setCursorFromEvent(e, target);
+      // 触发目标对象的鼠标悬停和移出事件
       this._fireOverOutEvents(e, target);
-    } else {
+    }
+    // 如果正在进行变换操作
+    else {
+      // 对对象进行变换操作
       this._transformObject(e);
     }
+    // 调用文本编辑管理器的鼠标移动处理方法
     this.textEditingManager.onMouseMove(e);
+    // 触发 'move' 事件
     this._handleEvent(e, 'move');
+    // 重置事件处理过程中缓存的变换数据
     this._resetTransformEventData();
   }
 
@@ -16724,13 +16846,15 @@ class Path extends FabricObject {
   }
 
   /**
+   * 设置路径数据并更新对象的边界框
    * @private
-   * @param {TComplexPathData | string} path Path data (sequence of coordinates and corresponding "command" tokens)
-   * @param {boolean} [adjustPosition] pass true to reposition the object according to the bounding box
-   * @returns {Point} top left position of the bounding box, useful for complementary positioning
+   * @param {TComplexPathData | string} path 路径数据，可以是复杂路径数据数组或SVG路径字符串
+   * @param {boolean} [adjustPosition] 是否根据新的边界框调整对象位置，默认为false
    */
   _setPath(path, adjustPosition) {
+    // 将路径数据转换为简化格式：如果是数组直接转换，如果是字符串先解析
     this.path = makePathSimpler(Array.isArray(path) ? path : parsePath(path));
+    // 根据新的路径数据更新对象的边界框，并根据参数决定是否调整位置
     this.setBoundingBox(adjustPosition);
   }
 
@@ -19241,34 +19365,52 @@ class FabricText extends StyledText {
   /**
    * @private
    * Divides text into lines of text and lines of graphemes.
+   * 将文本分割成文本行和字形行。
+   *
+   * @returns {TextLinesInfo} 包含分割后的文本行、字形行、字形文本和未换行文本行的信息对象。
    */
   _splitText() {
+    // 调用 _splitTextIntoLines 方法将文本分割成不同的行和字形信息
     const newLines = this._splitTextIntoLines(this.text);
+    // 将分割后的文本行赋值给 textLines 属性
     this.textLines = newLines.lines;
+    // 将分割后的字形行赋值给 _textLines 属性
     this._textLines = newLines.graphemeLines;
+    // 将未换行的文本行赋值给 _unwrappedTextLines 属性
     this._unwrappedTextLines = newLines._unwrappedLines;
+    // 将分割后的字形文本赋值给 _text 属性
     this._text = newLines.graphemeText;
+    // 返回包含分割信息的对象
     return newLines;
   }
 
   /**
-   * Initialize or update text dimensions.
-   * Updates this.width and this.height with the proper values.
-   * Does not return dimensions.
+   * 初始化或更新文本的尺寸。
+   * 此方法会重新分割文本，清除缓存，标记对象为脏状态，然后根据是否有路径来计算文本的宽度和高度。
+   * 如果文本对齐方式为 'justify'，还会调整空格的宽度以实现两端对齐。
    */
   initDimensions() {
+    // 分割文本为行和字形
     this._splitText();
+    // 清除缓存的行宽、行高和字符边界框信息
     this._clearCache();
+    // 标记对象为脏状态，表明需要重新渲染
     this.dirty = true;
+    // 如果文本有路径
     if (this.path) {
+      // 将路径的宽度赋值给文本对象的宽度
       this.width = this.path.width;
+      // 将路径的高度赋值给文本对象的高度
       this.height = this.path.height;
     } else {
+      // 计算文本的宽度，取计算结果、光标宽度或最小文本宽度中的最大值
       this.width = this.calcTextWidth() || this.cursorWidth || this.MIN_TEXT_WIDTH;
+      // 计算文本的高度
       this.height = this.calcTextHeight();
     }
+    // 如果文本对齐方式包含 'justify'
     if (this.textAlign.includes(JUSTIFY)) {
-      // once text is measured we need to make space fatter to make justified text.
+      // 注释：一旦文本被测量，我们需要增大空格的宽度以实现两端对齐的文本效果
       this.enlargeSpaces();
     }
   }
@@ -19374,17 +19516,27 @@ class FabricText extends StyledText {
   }
 
   /**
-   * @private
-   * @param {CanvasRenderingContext2D} ctx Context to render on
+   * 在指定的画布上下文中渲染文本对象。
+   * 此方法会处理文本路径的渲染、文本样式的设置、文本行背景的渲染、文本装饰（下划线、上划线、删除线）的渲染以及文本内容的渲染。
+   *
+   * @param {CanvasRenderingContext2D} ctx - 用于渲染的画布上下文。
    */
   _render(ctx) {
+    // 获取文本对象的路径
     const path = this.path;
+    // 如果路径存在且可见，则渲染路径
     path && !path.isNotVisible() && path._render(ctx);
+    // 设置文本的样式，如字体、字号、对齐方式等
     this._setTextStyles(ctx);
+    // 渲染文本行的背景
     this._renderTextLinesBackground(ctx);
+    // 渲染文本的下划线装饰
     this._renderTextDecoration(ctx, 'underline');
+    // 渲染文本内容，包括填充和描边
     this._renderText(ctx);
+    // 渲染文本的上划线装饰
     this._renderTextDecoration(ctx, 'overline');
+    // 渲染文本的删除线装饰
     this._renderTextDecoration(ctx, 'linethrough');
   }
 
@@ -19431,19 +19583,25 @@ class FabricText extends StyledText {
   }
 
   /**
-   * calculate and return the text Width measuring each line.
-   * @private
-   * @param {CanvasRenderingContext2D} ctx Context to render on
-   * @return {Number} Maximum width of Text object
+   * 计算文本的总宽度，即所有行中最宽的行的宽度。
+   * 该方法会遍历文本的每一行，调用 `getLineWidth` 方法获取每行的宽度，并找出其中的最大值。
+   *
+   * @returns {number} - 文本的总宽度。
    */
   calcTextWidth() {
+    // 初始化最大宽度为第一行的宽度
     let maxWidth = this.getLineWidth(0);
+
+    // 遍历除第一行外的所有行
     for (let i = 1, len = this._textLines.length; i < len; i++) {
+      // 获取当前行的宽度
       const currentLineWidth = this.getLineWidth(i);
+      // 如果当前行的宽度大于最大宽度，则更新最大宽度
       if (currentLineWidth > maxWidth) {
         maxWidth = currentLineWidth;
       }
     }
+    // 返回最大宽度，即文本的总宽度
     return maxWidth;
   }
 
@@ -19590,45 +19748,64 @@ class FabricText extends StyledText {
   }
 
   /**
-   * measure a text line measuring all characters.
-   * @param {Number} lineIndex line number
+   * 测量指定行的宽度。
+   * 该方法会调用 `_measureLine` 方法获取行的测量信息，并根据字符间距对宽度进行调整。
+   * 如果调整后的宽度小于 0，则将宽度设置为 0。
+   *
+   * @param {number} lineIndex - 要测量的行的索引。
+   * @returns {Object} - 包含测量信息的对象，至少包含 `width` 属性。
    */
   measureLine(lineIndex) {
+    // 调用 _measureLine 方法获取行的测量信息
     const lineInfo = this._measureLine(lineIndex);
+    // 如果字符间距不为 0，则从行宽中减去字符间距的宽度
     if (this.charSpacing !== 0) {
       lineInfo.width -= this._getWidthOfCharSpacing();
     }
+    // 如果行宽小于 0，则将行宽设置为 0
     if (lineInfo.width < 0) {
       lineInfo.width = 0;
     }
+    // 返回测量信息
     return lineInfo;
   }
 
   /**
-   * measure every grapheme of a line, populating __charBounds
-   * @param {Number} lineIndex
-   * @return {Object} object.width total width of characters
-   * @return {Object} object.numOfSpaces length of chars that match this._reSpacesAndTabs
+   * 测量指定行的文本宽度和字符信息。
+   * 此方法会遍历行中的每个字符，计算其宽度，并根据文本对齐方式和路径信息进行相应的处理。
+   *
+   * @param {number} lineIndex - 要测量的行的索引。
+   * @returns {{ width: number; numOfSpaces: number }} - 包含行的总宽度和空格数量的对象。
    */
   _measureLine(lineIndex) {
+    // 初始化变量，用于存储行的总宽度、前一个字符和当前字符的信息
     let width = 0,
       prevGrapheme,
       graphemeInfo;
+
+    // 检查文本是否在路径的右侧，获取路径对象、当前行的字符数组和行的长度
     const reverse = this.pathSide === RIGHT,
       path = this.path,
       line = this._textLines[lineIndex],
       llength = line.length,
+      // 创建一个数组来存储当前行每个字符的边界框信息
       lineBounds = new Array(llength);
+
+    // 将当前行的边界框信息存储到 __charBounds 数组中
     this.__charBounds[lineIndex] = lineBounds;
+    // 遍历当前行的每个字符
     for (let i = 0; i < llength; i++) {
       const grapheme = line[i];
+      // 获取当前字符的边界框信息
       graphemeInfo = this._getGraphemeBox(grapheme, lineIndex, i, prevGrapheme);
+      // 将当前字符的边界框信息存储到 lineBounds 数组中
       lineBounds[i] = graphemeInfo;
+      // 累加当前字符的宽度到行的总宽度中
       width += graphemeInfo.kernedWidth;
+      // 更新前一个字符为当前字符
       prevGrapheme = grapheme;
     }
-    // this latest bound box represent the last character of the line
-    // to simplify cursor handling in interactive mode.
+    // 为了简化交互式模式下的光标处理，添加一个额外的边界框表示行的最后一个字符
     lineBounds[llength] = {
       left: graphemeInfo ? graphemeInfo.left + graphemeInfo.width : 0,
       width: 0,
@@ -19636,9 +19813,13 @@ class FabricText extends StyledText {
       height: this.fontSize,
       deltaY: 0
     };
+    // 如果文本有路径且路径有分段信息
     if (path && path.segmentsInfo) {
+      // 初始化路径上的位置
       let positionInPath = 0;
+      // 获取路径的总长度
       const totalPathLength = path.segmentsInfo[path.segmentsInfo.length - 1].length;
+      // 根据文本对齐方式计算路径上的起始位置
       switch (this.textAlign) {
         case LEFT:
           positionInPath = reverse ? totalPathLength - width : 0;
@@ -19651,20 +19832,25 @@ class FabricText extends StyledText {
           break;
         //todo - add support for justify
       }
+      // 根据路径起始偏移量和方向调整路径上的位置
       positionInPath += this.pathStartOffset * (reverse ? -1 : 1);
+      // 根据文本是否在路径右侧决定遍历方向
       for (let i = reverse ? llength - 1 : 0; reverse ? i >= 0 : i < llength; reverse ? i-- : i++) {
+        // 获取当前字符的边界框信息
         graphemeInfo = lineBounds[i];
+        // 处理路径位置超出或小于路径总长度的情况
         if (positionInPath > totalPathLength) {
           positionInPath %= totalPathLength;
         } else if (positionInPath < 0) {
           positionInPath += totalPathLength;
         }
-        // it would probably much faster to send all the grapheme position for a line
-        // and calculate path position/angle at once.
+        // 为当前字符设置路径上的位置和角度信息
         this._setGraphemeOnPath(positionInPath, graphemeInfo);
+        // 更新路径上的位置
         positionInPath += graphemeInfo.kernedWidth;
       }
     }
+    // 返回行的总宽度和空格数量
     return {
       width: width,
       numOfSpaces: 0
@@ -20126,20 +20312,27 @@ class FabricText extends StyledText {
   }
 
   /**
-   * Measure a single line given its index. Used to calculate the initial
-   * text bounding box. The values are calculated and stored in __lineWidths cache.
-   * @private
-   * @param {Number} lineIndex line number
-   * @return {Number} Line width
+   * 获取指定行的宽度。
+   * 如果该行的宽度已经被计算过并缓存，直接返回缓存的值；
+   * 否则，调用 `measureLine` 方法计算该行的宽度，并将结果缓存起来。
+   *
+   * @param {number} lineIndex - 要获取宽度的行的索引。
+   * @returns {number} - 指定行的宽度。
    */
   getLineWidth(lineIndex) {
+    // 检查该行的宽度是否已经被计算过并缓存
     if (this.__lineWidths[lineIndex] !== undefined) {
+      // 如果已经缓存，直接返回缓存的值
       return this.__lineWidths[lineIndex];
     }
+
+    // 如果未缓存，调用 measureLine 方法计算该行的宽度
     const {
       width
     } = this.measureLine(lineIndex);
+    // 将计算得到的宽度缓存起来
     this.__lineWidths[lineIndex] = width;
+    // 返回计算得到的宽度
     return width;
   }
   _getWidthOfCharSpacing() {
@@ -20258,53 +20451,79 @@ class FabricText extends StyledText {
   }
 
   /**
-   * Renders text instance on a specified context
-   * @param {CanvasRenderingContext2D} ctx Context to render on
+   * 在指定的画布上下文中渲染文本对象。
+   * 此方法会先检查文本对象的可见性、是否在屏幕内以及是否需要强制清除缓存，
+   * 然后调用父类的 render 方法进行渲染。
+   *
+   * @param {CanvasRenderingContext2D} ctx - 用于渲染的画布上下文。
    */
   render(ctx) {
+    // 检查文本对象是否可见，如果不可见则直接返回，不进行渲染
     if (!this.visible) {
       return;
     }
+    // 检查画布是否设置了跳过屏幕外对象的渲染，并且文本对象不在组内且不在屏幕内，
+    // 如果满足条件则直接返回，不进行渲染
     if (this.canvas && this.canvas.skipOffscreen && !this.group && !this.isOnScreen()) {
       return;
     }
+    // 检查是否需要强制清除缓存，如果需要则重新初始化文本对象的尺寸
     if (this._forceClearCache) {
       this.initDimensions();
     }
+    // 调用父类的 render 方法进行渲染
     super.render(ctx);
   }
 
   /**
    * Override this method to customize grapheme splitting
+   * 重写此方法以自定义字形分割逻辑
    * @todo the util `graphemeSplit` needs to be injectable in some way.
+   * 待办事项：工具函数 `graphemeSplit` 需要以某种方式可注入。
    * is more comfortable to inject the correct util rather than having to override text
-   * in the middle of the prototype chain
-   * @param {string} value
-   * @returns {string[]} array of graphemes
+   * 比起在原型链中间重写文本处理逻辑，注入正确的工具函数会更方便。
+   * @param {string} value 要进行字形分割的字符串
+   * @returns {string[]} array of graphemes 分割后的字形数组
    */
   graphemeSplit(value) {
+    // 调用外部的 graphemeSplit 函数对传入的字符串进行字形分割
     return graphemeSplit(value);
   }
 
   /**
    * Returns the text as an array of lines.
-   * @param {String} text text to split
-   * @returns  Lines in the text
+   * 将文本分割成文本行和字形行的信息对象。
+   *
+   * @param {String} text text to split 需要分割的文本
+   * @returns  Lines in the text 返回包含分割后的文本行、字形行、字形文本和未换行文本行的信息对象
    */
   _splitTextIntoLines(text) {
+    // 使用正则表达式 _reNewline 分割文本为行
     const lines = text.split(this._reNewline),
+      // 创建一个新数组 newLines，用于存储每行的字形数组
       newLines = new Array(lines.length),
+      // 定义一个换行符数组
       newLine = ['\n'];
+    // 初始化一个空数组，用于存储所有字形组成的文本
     let newText = [];
+    // 遍历分割后的每一行
     for (let i = 0; i < lines.length; i++) {
+      // 将当前行的文本分割成字形数组，并存储到 newLines 中
       newLines[i] = this.graphemeSplit(lines[i]);
+      // 将当前行的字形数组和换行符数组添加到 newText 中
       newText = newText.concat(newLines[i], newLine);
     }
+    // 移除 newText 末尾的换行符
     newText.pop();
+    // 返回包含分割信息的对象
     return {
+      // 未换行的文本行，存储每行的字形数组
       _unwrappedLines: newLines,
+      // 分割后的文本行
       lines: lines,
+      // 所有字形组成的文本
       graphemeText: newText,
+      // 每行的字形数组
       graphemeLines: newLines
     };
   }
@@ -20816,8 +21035,10 @@ class ITextBehavior extends FabricText {
   constructor() {
     super(...arguments);
     /**
-     * Helps determining when the text is in composition, so that the cursor
-     * rendering is altered.
+     * 用于确定文本是否处于组合输入模式（如中文输入法），
+     * 以便相应地调整光标的渲染方式。
+     * 当用户使用输入法（如中文、日文等）进行组合输入时，
+     * 该标志位会被设置为true，表示当前处于组合输入状态。
      */
     _defineProperty(this, "_currentCursorOpacity", 1);
   }
@@ -21198,7 +21419,11 @@ class ITextBehavior extends FabricText {
   }
 
   /**
-   * @private
+   * 更新隐藏的textarea元素的状态
+   * 1. 清空光标偏移缓存
+   * 2. 如果不存在隐藏的textarea则直接返回
+   * 3. 如果不在组合输入模式下，更新textarea的选择范围
+   * 4. 更新textarea的位置
    */
   _updateTextarea() {
     this.cursorOffsetCache = {};
@@ -21214,7 +21439,16 @@ class ITextBehavior extends FabricText {
   }
 
   /**
-   * @private
+   * 从隐藏的textarea更新文本对象的状态
+   * 1. 如果不存在隐藏的textarea则直接返回
+   * 2. 清空光标偏移缓存
+   * 3. 更新文本内容
+   * 4. 标记对象为脏状态
+   * 5. 重新计算尺寸和坐标
+   * 6. 将textarea的选择范围转换为grapheme索引
+   * 7. 更新选择结束位置
+   * 8. 如果不在组合输入模式下，更新选择开始位置
+   * 9. 更新textarea的位置
    */
   updateFromTextArea() {
     if (!this.hiddenTextarea) {
@@ -21246,8 +21480,14 @@ class ITextBehavior extends FabricText {
   }
 
   /**
-   * @private
-   * @return {Object} style contains style for hiddenTextarea
+   * 计算隐藏textarea元素的位置
+   * 1. 如果没有画布，返回默认位置
+   * 2. 根据组合输入模式确定光标位置
+   * 3. 获取光标边界和位置信息
+   * 4. 计算字符高度和画布缩放比例
+   * 5. 计算textarea的最终位置，确保不超出画布边界
+   * 6. 添加画布在文档中的偏移量
+   * @return {Object} 包含隐藏textarea的样式信息
    */
   _calcTextareaPosition() {
     if (!this.canvas) {
@@ -21784,52 +22024,67 @@ class ITextKeyBehavior extends ITextBehavior {
   }
 
   /**
-   * Handles keydown event
-   * only used for arrows and combination of modifier keys.
-   * @param {KeyboardEvent} e Event object
+   * 处理键盘按下事件
+   * 主要用于处理方向键和组合键
+   * @param {KeyboardEvent} e 键盘事件对象
    */
   onKeyDown(e) {
+    // 如果当前不在编辑状态，直接返回
     if (!this.isEditing) {
       return;
     }
+    // 根据文本方向选择对应的键位映射表
     const keyMap = this.direction === 'rtl' ? this.keysMapRtl : this.keysMap;
+    // 如果按下的键在键位映射表中
     if (e.keyCode in keyMap) {
+      // 执行对应的处理函数
       this[keyMap[e.keyCode]](e);
     } else if (e.keyCode in this.ctrlKeysMapDown && (e.ctrlKey || e.metaKey)) {
+      // 如果是Ctrl/Cmd组合键，执行对应的处理函数
       this[this.ctrlKeysMapDown[e.keyCode]](e);
     } else {
+      // 其他按键直接返回
       return;
     }
+    // 阻止事件冒泡和默认行为
     e.stopImmediatePropagation();
     e.preventDefault();
+    // 如果是方向键（keyCode 33-40）
     if (e.keyCode >= 33 && e.keyCode <= 40) {
-      // if i press an arrow key just update selection
+      // 更新选区状态
       this.inCompositionMode = false;
       this.clearContextTop();
       this.renderCursorOrSelection();
     } else {
+      // 其他情况请求重新渲染
       this.canvas && this.canvas.requestRenderAll();
     }
   }
 
   /**
-   * Handles keyup event
-   * We handle KeyUp because ie11 and edge have difficulties copy/pasting
-   * if a copy/cut event fired, keyup is dismissed
-   * @param {KeyboardEvent} e Event object
+   * 处理键盘抬起事件
+   * 我们处理KeyUp是因为IE11和Edge在复制/粘贴时存在问题
+   * 如果触发了copy/cut事件，keyup事件会被忽略
+   * @param {KeyboardEvent} e 键盘事件对象
    */
   onKeyUp(e) {
+    // 如果不在编辑状态，或者已经完成复制操作，或者处于输入法组合模式，直接返回
     if (!this.isEditing || this._copyDone || this.inCompositionMode) {
       this._copyDone = false;
       return;
     }
+    // 如果按下的键在Ctrl/Cmd组合键映射表中
     if (e.keyCode in this.ctrlKeysMapUp && (e.ctrlKey || e.metaKey)) {
+      // 执行对应的处理函数
       this[this.ctrlKeysMapUp[e.keyCode]](e);
     } else {
+      // 其他情况直接返回
       return;
     }
+    // 阻止事件冒泡和默认行为
     e.stopImmediatePropagation();
     e.preventDefault();
+    // 请求画布重新渲染
     this.canvas && this.canvas.requestRenderAll();
   }
 
@@ -22390,12 +22645,13 @@ class ITextClickBehavior extends ITextKeyBehavior {
   }
 
   /**
-   * Default event handler for the basic functionalities needed on _mouseDown
-   * can be overridden to do something different.
-   * Scope of this implementation is: find the click position, set selectionStart
-   * find selectionEnd, initialize the drawing of either cursor or selection area
-   * initializing a mousedDown on a text area will cancel fabricjs knowledge of
-   * current compositionMode. It will be set to false.
+   * 默认的鼠标按下事件处理程序，用于处理文本对象的基本功能
+   * 可以被重写以实现不同的行为
+   * 该实现的主要功能包括：
+   * 1. 查找点击位置
+   * 2. 设置 selectionStart 和 selectionEnd
+   * 3. 初始化光标或选择区域的绘制
+   * 4. 在文本区域初始化鼠标按下事件会取消 fabricjs 对当前组合输入模式（如中文输入法）的跟踪，将其设置为 false
    */
   _mouseDownHandler(_ref) {
     let {
@@ -22408,38 +22664,50 @@ class ITextClickBehavior extends ITextKeyBehavior {
       return;
     }
     this.canvas.textEditingManager.register(this);
-    if (this.selected) {
-      this.inCompositionMode = false;
-      this.setCursorByClick(e);
+    // if (this.selected) {
+    //   this.inCompositionMode = false;
+    //   this.setCursorByClick(e);
+    // }
+    this.inCompositionMode = false;
+    this.setCursorByClick(e);
+
+    // if (this.isEditing) {
+    //   this.__selectionStartOnMouseDown = this.selectionStart;
+    //   if (this.selectionStart === this.selectionEnd) {
+    //     this.abortCursorAnimation();
+    //   }
+    //   this.renderCursorOrSelection();
+    // }
+
+    this.__selectionStartOnMouseDown = this.selectionStart;
+    if (this.selectionStart === this.selectionEnd) {
+      this.abortCursorAnimation();
     }
-    if (this.isEditing) {
-      this.__selectionStartOnMouseDown = this.selectionStart;
-      if (this.selectionStart === this.selectionEnd) {
-        this.abortCursorAnimation();
-      }
-      this.renderCursorOrSelection();
-    }
+    this.renderCursorOrSelection();
   }
 
   /**
-   * Default event handler for the basic functionalities needed on mousedown:before
-   * can be overridden to do something different.
-   * Scope of this implementation is: verify the object is already selected when mousing down
+   * 处理鼠标按下前的事件
+   * 主要目的是确保在对象变为不可选择时不会意外触发编辑模式
+   * @param {TPointerEventInfo} e 鼠标事件信息
    */
   _mouseDownHandlerBefore(_ref2) {
     let {
       e
     } = _ref2;
+    // 检查画布是否存在、文本是否可编辑以及是否为左键点击
     if (!this.canvas || !this.editable || notALeftClick(e)) {
       return;
     }
-    // we want to avoid that an object that was selected and then becomes unselectable,
-    // may trigger editing mode in some way.
-    this.selected = this === this.canvas._activeObject;
+    // 我们想要避免一个对象被选中后变为不可选择时，
+    // 可能会以某种方式触发编辑模式。
+    // this.selected = this === this.canvas._activeObject;
+    this.selected = true;
   }
 
   /**
-   * standard handler for mouse up, overridable
+   * 处理鼠标抬起事件的标准处理程序，可被重写
+   * @param {TPointerEventInfo} e 鼠标事件信息
    * @private
    */
   mouseUpHandler(_ref3) {
@@ -22447,30 +22715,43 @@ class ITextClickBehavior extends ITextKeyBehavior {
       e,
       transform
     } = _ref3;
+    // 结束拖拽操作并获取是否发生了拖拽
     const didDrag = this.draggableTextDelegate.end(e);
+    // 如果存在画布
     if (this.canvas) {
+      // 从文本编辑管理器中注销当前对象
       this.canvas.textEditingManager.unregister(this);
+
+      // 获取当前活动对象
       const activeObject = this.canvas._activeObject;
+      // 如果存在活动对象且不是当前对象
       if (activeObject && activeObject !== this) {
-        // avoid running this logic when there is an active object
-        // this because is possible with shift click and fast clicks,
-        // to rapidly deselect and reselect this object and trigger an enterEdit
+        // 避免在有活动对象时运行此逻辑
+        // 因为在快速点击和shift点击时，可能会快速取消选择和重新选择此对象并触发进入编辑模式
         return;
       }
     }
+    // 检查对象是否可编辑、组是否可交互、是否执行了变换操作、是否为左键点击、是否发生了拖拽
     if (!this.editable || this.group && !this.group.interactive || transform && transform.actionPerformed || notALeftClick(e) || didDrag) {
       return;
     }
+
+    // 如果上次点击时对象被选中且没有活动控件
     if (this.__lastSelected && !this.getActiveControl()) {
+      // 取消选中状态
       this.selected = false;
       this.__lastSelected = false;
+      // 进入编辑模式
       this.enterEditing(e);
+      // 如果选择开始和结束位置相同，初始化延迟光标
       if (this.selectionStart === this.selectionEnd) {
         this.initDelayedCursor(true);
       } else {
+        // 否则渲染光标或选择区域
         this.renderCursorOrSelection();
       }
     } else {
+      // 否则设置对象为选中状态
       this.selected = true;
     }
   }
@@ -22805,36 +23086,52 @@ class IText extends ITextClickBehavior {
   }
 
   /**
-   * @override block cursor/selection logic while rendering the exported canvas
-   * @todo this workaround should be replaced with a more robust solution
+   * 将对象转换为Canvas元素
+   * 在导出Canvas时临时禁用光标/选择逻辑
+   * @todo 这个临时解决方案应该被更健壮的方案替代
+   * @param {ObjectToCanvasElementOptions} [options] 可选的配置项
+   * @return {HTMLCanvasElement} 返回生成的Canvas元素
    */
   toCanvasElement(options) {
+    // 保存当前编辑状态
     const isEditing = this.isEditing;
+    // 临时禁用编辑模式
     this.isEditing = false;
+    // 调用父类方法生成Canvas元素
     const canvas = super.toCanvasElement(options);
+    // 恢复之前的编辑状态
     this.isEditing = isEditing;
+    // 返回生成的Canvas元素
     return canvas;
   }
 
   /**
-   * Renders cursor or selection (depending on what exists)
-   * it does on the contextTop. If contextTop is not available, do nothing.
+   * 渲染光标或选区（根据当前状态决定）
+   * 在contextTop上执行渲染，如果contextTop不可用则不执行任何操作
    */
   renderCursorOrSelection() {
+    // 如果当前不在编辑状态，直接返回
     if (!this.isEditing) {
       return;
     }
+    // 清除并获取contextTop上下文
     const ctx = this.clearContextTop(true);
+    // 如果获取上下文失败，直接返回
     if (!ctx) {
       return;
     }
+    // 获取光标边界信息
     const boundaries = this._getCursorBoundaries();
+    // 如果选区起始和结束位置相同且不在输入法组合模式，渲染光标
     if (this.selectionStart === this.selectionEnd && !this.inCompositionMode) {
       this.renderCursor(ctx, boundaries);
     } else {
+      // 否则渲染选区
       this.renderSelection(ctx, boundaries);
     }
+    // 标记contextTop为脏，需要重绘
     this.canvas.contextTopDirty = true;
+    // 恢复上下文状态
     ctx.restore();
   }
 
@@ -22977,15 +23274,17 @@ class IText extends ITextClickBehavior {
   }
 
   /**
-   * Renders text selection
-   * @param {Object} boundaries Object with left/top/leftOffset/topOffset
-   * @param {CanvasRenderingContext2D} ctx transformed context to draw on
+   * 渲染文本选区
+   * @param {CanvasRenderingContext2D} ctx 画布上下文
+   * @param {CursorBoundaries} boundaries 光标边界信息
    */
   renderSelection(ctx, boundaries) {
+    // 根据是否处于输入法组合模式，获取选区起始和结束位置
     const selection = {
       selectionStart: this.inCompositionMode ? this.hiddenTextarea.selectionStart : this.selectionStart,
       selectionEnd: this.inCompositionMode ? this.hiddenTextarea.selectionEnd : this.selectionEnd
     };
+    // 调用内部方法渲染选区
     this._renderSelection(ctx, selection, boundaries);
   }
 
@@ -23002,34 +23301,46 @@ class IText extends ITextClickBehavior {
   }
 
   /**
-   * Renders text selection
+   * 渲染文本选区
    * @private
-   * @param {{ selectionStart: number, selectionEnd: number }} selection
-   * @param {Object} boundaries Object with left/top/leftOffset/topOffset
-   * @param {CanvasRenderingContext2D} ctx transformed context to draw on
+   * @param {CanvasRenderingContext2D} ctx 画布上下文
+   * @param {{ selectionStart: number, selectionEnd: number }} selection 选区对象，包含起始和结束位置
+   * @param {CursorBoundaries} boundaries 光标边界信息
    */
   _renderSelection(ctx, selection, boundaries) {
+    // 获取选区起始和结束位置
     const selectionStart = selection.selectionStart,
       selectionEnd = selection.selectionEnd,
+      // 判断是否为两端对齐
       isJustify = this.textAlign.includes(JUSTIFY),
+      // 获取起始和结束位置的二维坐标
       start = this.get2DCursorLocation(selectionStart),
       end = this.get2DCursorLocation(selectionEnd),
+      // 获取起始和结束行号
       startLine = start.lineIndex,
       endLine = end.lineIndex,
+      // 获取起始和结束字符索引
       startChar = start.charIndex < 0 ? 0 : start.charIndex,
       endChar = end.charIndex < 0 ? 0 : end.charIndex;
+
+    // 遍历每一行
     for (let i = startLine; i <= endLine; i++) {
+      // 获取当前行的左边距
       const lineOffset = this._getLineLeftOffset(i) || 0;
       let lineHeight = this.getHeightOfLine(i),
         realLineHeight = 0,
         boxStart = 0,
         boxEnd = 0;
+
+      // 如果是起始行，设置选区起始位置
       if (i === startLine) {
         boxStart = this.__charBounds[startLine][startChar].left;
       }
+      // 如果是中间行，设置选区结束位置为行宽
       if (i >= startLine && i < endLine) {
         boxEnd = isJustify && !this.isEndOfWrapping(i) ? this.width : this.getLineWidth(i) || 5; // WTF is this 5?
       } else if (i === endLine) {
+        // 如果是结束行，根据字符位置设置选区结束位置
         if (endChar === 0) {
           boxEnd = this.__charBounds[endLine][endChar].left;
         } else {
@@ -23037,21 +23348,27 @@ class IText extends ITextClickBehavior {
           boxEnd = this.__charBounds[endLine][endChar - 1].left + this.__charBounds[endLine][endChar - 1].width - charSpacing;
         }
       }
+      // 计算实际行高
       realLineHeight = lineHeight;
+      // 根据行高调整选区高度
       if (this.lineHeight < 1 || i === endLine && this.lineHeight > 1) {
         lineHeight /= this.lineHeight;
       }
+      // 计算绘制起始位置和高度
       let drawStart = boundaries.left + lineOffset + boxStart,
         drawHeight = lineHeight,
         extraTop = 0;
       const drawWidth = boxEnd - boxStart;
+      // 如果是输入法组合模式，设置特殊样式
       if (this.inCompositionMode) {
         ctx.fillStyle = this.compositionColor || 'black';
         drawHeight = 1;
         extraTop = lineHeight;
       } else {
+        // 否则使用选区颜色
         ctx.fillStyle = this.selectionColor;
       }
+      // 处理从右到左文本的绘制位置
       if (this.direction === 'rtl') {
         if (this.textAlign === RIGHT || this.textAlign === JUSTIFY || this.textAlign === JUSTIFY_RIGHT) {
           drawStart = this.width - drawStart - drawWidth;
@@ -23061,7 +23378,9 @@ class IText extends ITextClickBehavior {
           drawStart = boundaries.left + lineOffset - boxEnd;
         }
       }
+      // 绘制选区矩形
       ctx.fillRect(drawStart, boundaries.top + boundaries.topOffset + extraTop, drawWidth, drawHeight);
+      // 更新topOffset
       boundaries.topOffset += realLineHeight;
     }
   }
@@ -23397,13 +23716,12 @@ class Textbox extends IText {
   }
 
   /**
-   * Wraps text using the 'width' property of Textbox. First this function
-   * splits text on newlines, so we preserve newlines entered by the user.
-   * Then it wraps each line using the width of the Textbox by calling
-   * _wrapLine().
-   * @param {Array} lines The string array of text that is split into lines
-   * @param {Number} desiredWidth width you want to wrap to
-   * @returns {Array} Array of lines
+   * 使用Textbox的'width'属性对文本进行换行处理。
+   * 首先，该函数将文本按换行符分割，以保留用户输入的换行。
+   * 然后通过调用_wrapLine()方法，根据Textbox的宽度对每一行进行换行处理。
+   * @param {Array} lines 已按行分割的文本字符串数组
+   * @param {Number} desiredWidth 目标换行宽度
+   * @returns {Array} 返回换行后的文本数组，每个元素代表一行
    */
   _wrapText(lines, desiredWidth) {
     this.isWrapping = true;
@@ -23590,20 +23908,24 @@ class Textbox extends IText {
   }
 
   /**
-   * Gets lines of text to render in the Textbox. This function calculates
-   * text wrapping on the fly every time it is called.
-   * @param {String} text text to split
-   * @returns {Array} Array of lines in the Textbox.
-   * @override
+   * 将文本分割成多行显示
+   * @param {string} text 要分割的文本
+   * @returns {Object} 返回包含分割后文本信息的对象
    */
   _splitTextIntoLines(text) {
+    // 调用父类方法进行初步的文本分割
     const newText = super._splitTextIntoLines(text),
+      // 根据当前宽度对文本进行自动换行处理
       graphemeLines = this._wrapText(newText.lines, this.width),
+      // 创建与换行后行数相同的数组
       lines = new Array(graphemeLines.length);
+    // 将每行的字符数组连接成字符串
     for (let i = 0; i < graphemeLines.length; i++) {
       lines[i] = graphemeLines[i].join('');
     }
+    // 更新返回对象中的行信息
     newText.lines = lines;
+    // 保存字符级别的行信息
     newText.graphemeLines = graphemeLines;
     return newText;
   }
@@ -23643,9 +23965,9 @@ class Textbox extends IText {
  * @default
  */
 /**
- * Minimum calculated width of a textbox, in pixels.
- * fixed to 2 so that an empty textbox cannot go to 0
- * and is still selectable without text.
+ * 文本框的最小计算宽度，单位为像素。
+ * 固定为 2，这样即使文本框为空，宽度也不会变为 0，
+ * 并且在没有文本的情况下仍然可以选择。
  * @type Number
  * @default
  */
@@ -23654,9 +23976,6 @@ class Textbox extends IText {
  * this is a cheap way to help with chinese/japanese
  * @type Boolean
  * @since 2.6.0
- */
-/**
- * 所属对象
  */
 _defineProperty(Textbox, "type", 'Textbox');
 _defineProperty(Textbox, "textLayoutProperties", [...IText.textLayoutProperties, 'width']);
@@ -25023,83 +25342,387 @@ _defineProperty(FabricImage, "ATTRIBUTE_NAMES", [...SHARED_ATTRIBUTES, 'x', 'y',
 classRegistry.setClass(FabricImage);
 classRegistry.setSVGClass(FabricImage);
 
-class OlpShape extends Path {
-  constructor() {
-    let options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+class OlpShapeLayoutStrategy extends LayoutStrategy {
+  calcBoundingBox(objects, context) {
     const {
+      type,
+      target
+    } = context;
+    if (type === LAYOUT_TYPE_IMPERATIVE && context.overrides) {
+      return context.overrides;
+    }
+    if (objects.length === 0) {
+      return;
+    }
+    const {
+      left,
+      top,
       width,
-      height,
-      shapeStyle: {
-        type,
-        customPath,
-        viewBox
-      }
-    } = options;
+      height
+    } = makeBoundingBoxFromPoints([objects[0]].map(object => getObjectBounds(target, object)).reduce((coords, curr) => coords.concat(curr), []));
+    const bboxSize = new Point(width, height);
+    const bboxLeftTop = new Point(left, top);
+    const bboxCenter = bboxLeftTop.add(bboxSize.scalarDivide(2));
+    if (type === LAYOUT_TYPE_INITIALIZATION) {
+      const actualSize = this.getInitialSize(context, {
+        size: bboxSize,
+        center: bboxCenter
+      });
+      return {
+        // in `initialization` we do not account for target's transformation matrix
+        center: bboxCenter,
+        // TODO: investigate if this is still necessary
+        relativeCorrection: new Point(0, 0),
+        size: actualSize
+      };
+    } else {
+      //  we send `relativeCenter` up to group's containing plane
+      const center = bboxCenter.transform(target.calcOwnMatrix());
+      return {
+        center,
+        size: bboxSize
+      };
+    }
+  }
+}
+_defineProperty(OlpShapeLayoutStrategy, "type", 'olp-shape-strategy');
+
+const olptextboxDefaultValues = {
+  wrap: true,
+  fit: 'none',
+  textAnchor: 'middleCenter',
+  textBodyLIns: 10,
+  textBodyTIns: 10,
+  textBodyRIns: 10,
+  textBodyBIns: 10
+};
+class OlpTextbox extends Textbox {
+  static getDefaults() {
+    return _objectSpread2(_objectSpread2({}, super.getDefaults()), OlpTextbox.ownDefaults);
+  }
+  constructor(text, options) {
+    super(text, _objectSpread2(_objectSpread2({}, OlpTextbox.ownDefaults), options));
+    /**
+     * 形状中文字自动换行
+     */
+    /**
+     * none: 不自动调整形状大小
+     * resize: 根据文本宽度自动调整形状大小
+     * shrink: 溢出时缩小文字
+     */
+    _defineProperty(this, "textboxMaxWidth", 0);
+    _defineProperty(this, "maxLineWidth", 0);
+  }
+  /**
+   * Unlike superclass's version of this function, Textbox does not update
+   * its width.
+   * @private
+   * @override
+   */
+  // initDimensions() {
+  //   if (!this.initialized) {
+  //     return;
+  //   }
+  //   this.isEditing && this.initDelayedCursor();
+  //   this._clearCache();
+  //   // clear dynamicMinWidth as it will be different after we re-wrap line
+  //   this.dynamicMinWidth = 0;
+  //   this.textboxMaxWidth =
+  //     (this.group?.width || 0) * (this.group?.scaleX || 1) -
+  //     this.textBodyLIns -
+  //     this.textBodyRIns;
+  //   // wrap lines
+  //   this._styleMap = this._generateStyleMap(this._splitText());
+  //   // if after wrapping, the width is smaller than dynamicMinWidth, change the width and re-wrap
+
+  //   if (this.width) {
+  //     if (this.width > this.maxLineWidth) {
+  //       this._set('width', Math.max(this.dynamicMinWidth, this.maxLineWidth));
+  //     }
+  //   } else {
+  //     this._set('width', Math.max(this.dynamicMinWidth, this.maxLineWidth));
+  //   }
+
+  //   if (this.textAlign.includes(JUSTIFY)) {
+  //     // once text is measured we need to make space fatter to make justified text.
+  //     this.enlargeSpaces();
+  //   }
+  //   // clear cache and re-calculate height
+  //   this.height = this.calcTextHeight();
+  //   this.calcLeftTop();
+  // }
+
+  // _wrapText(lines: string[], desiredWidth: number): string[][] {
+  //   this.maxLineWidth = 0;
+  //   return super._wrapText(lines, desiredWidth);
+  // }
+
+  // _wrapLine(
+  //   lineIndex: number,
+  //   desiredWidth: number,
+  //   { largestWordWidth, wordsData }: GraphemeData,
+  //   reservedSpace = 0,
+  // ): string[][] {
+  //   const additionalSpace = this._getWidthOfCharSpacing(),
+  //     splitByGrapheme = this.splitByGrapheme,
+  //     graphemeLines = [],
+  //     infix = splitByGrapheme ? '' : ' ';
+
+  //   let lineWidth = 0,
+  //     line: string[] = [],
+  //     // spaces in different languages?
+  //     offset = 0,
+  //     infixWidth = 0,
+  //     lineJustStarted = true;
+
+  //   desiredWidth -= reservedSpace;
+
+  //   const maxWidth = Math.max(
+  //     desiredWidth,
+  //     largestWordWidth,
+  //     this.dynamicMinWidth,
+  //   );
+  //   // layout words
+  //   const data = wordsData[lineIndex];
+  //   offset = 0;
+  //   let i;
+  //   for (i = 0; i < data.length; i++) {
+  //     const { word, width: wordWidth } = data[i];
+  //     offset += word.length;
+
+  //     lineWidth += infixWidth + wordWidth - additionalSpace;
+  //     if (lineWidth > maxWidth && !lineJustStarted && this.wrap) {
+  //       graphemeLines.push(line);
+  //       line = [];
+  //       lineWidth = wordWidth;
+  //       lineJustStarted = true;
+  //     } else {
+  //       lineWidth += additionalSpace;
+  //     }
+
+  //     if (!lineJustStarted && !splitByGrapheme) {
+  //       line.push(infix);
+  //     }
+  //     line = line.concat(word);
+
+  //     infixWidth = splitByGrapheme
+  //       ? 0
+  //       : this._measureWord([infix], lineIndex, offset);
+  //     offset++;
+  //     lineJustStarted = false;
+  //   }
+
+  //   this.maxLineWidth = Math.max(this.maxLineWidth || 0, lineWidth);
+
+  //   i && graphemeLines.push(line);
+
+  //   // TODO: this code is probably not necessary anymore.
+  //   // it can be moved out of this function since largestWordWidth is now
+  //   // known in advance
+  //   if (largestWordWidth + reservedSpace > this.dynamicMinWidth) {
+  //     this.dynamicMinWidth = largestWordWidth - additionalSpace + reservedSpace;
+  //   }
+  //   return graphemeLines;
+  // }
+
+  // calcLeftTop() {
+  //   const shape = this.group;
+  //   const actualWidth = shape?.width || 0;
+  //   const actualHeight = shape?.height || 0;
+  //   const halfWidth = actualWidth / 2;
+  //   const halfHeight = actualHeight / 2;
+  //   const textboxHalfWidth = this.width / 2;
+  //   const textboxHalfHeight = this.height / 2;
+  //   let left = 0;
+  //   let top = 0;
+
+  //   switch (this.textAnchor) {
+  //     case 'top':
+  //       left = this.setLeftPosition(halfWidth, textboxHalfWidth);
+  //       top = -halfHeight + this.textBodyTIns;
+  //       break;
+  //     case 'middle':
+  //       left = this.setLeftPosition(halfWidth, textboxHalfWidth);
+  //       top = -textboxHalfHeight;
+  //       break;
+  //     case 'bottom':
+  //       left = this.setLeftPosition(halfWidth, textboxHalfWidth);
+  //       top = halfHeight - this.height - this.textBodyBIns;
+  //       break;
+  //     case 'topCenter':
+  //       left = -textboxHalfWidth;
+  //       top = -halfHeight + this.textBodyTIns;
+  //       break;
+  //     case 'middleCenter':
+  //       left = -textboxHalfWidth;
+  //       top = -textboxHalfHeight;
+  //       break;
+  //     case 'bottomCenter':
+  //       left = -textboxHalfWidth;
+  //       top = halfHeight - this.height - this.textBodyBIns;
+  //       break;
+  //   }
+  //   // this.set({ left, top });
+  //   this._set('left', left);
+  //   this._set('top', top);
+  // }
+
+  // private setLeftPosition(halfWidth: number, textboxHalfWidth: number): number {
+  //   let left = 0;
+  //   if (this.textAlign === 'center') {
+  //     left = -textboxHalfWidth;
+  //   } else if (this.textAlign === 'right') {
+  //     left = halfWidth - this.width - this.textBodyRIns;
+  //   } else {
+  //     left = -halfWidth + this.textBodyLIns;
+  //   }
+  //   return left;
+  // }
+}
+_defineProperty(OlpTextbox, "ownDefaults", olptextboxDefaultValues);
+_defineProperty(OlpTextbox, "type", 'OlpTextbox');
+
+// 扁平化默认值
+const olpshapeDefaultValues = {
+  shapeType: 'rect',
+  shapeCustomPath: undefined,
+  shapeViewBox: undefined,
+  content: '',
+  fontSize: 12,
+  textBodyLIns: 10,
+  textBodyTIns: 10,
+  textBodyRIns: 10,
+  textBodyBIns: 10,
+  textAnchor: 'middleCenter',
+  textFill: '#fff',
+  hoverCursor: 'move'
+};
+class OlpShape extends Group {
+  constructor(options) {
+    const mergeOptions = _objectSpread2(_objectSpread2(_objectSpread2({}, olpshapeDefaultValues), options), {}, {
+      hasBorders: false
+    });
+    const {
+      shapeType,
+      shapeCustomPath,
+      shapeViewBox,
+      width,
+      height
+    } = mergeOptions;
     let pathData = '';
     let scaleX = 1;
     let scaleY = 1;
-    if (type) {
-      if (type === 'rect') {
+    if (shapeType) {
+      if (shapeType === 'rect') {
         pathData = "M 0 0 L ".concat(width, " 0 L ").concat(width, " ").concat(height, " L 0 ").concat(height, " Z");
       }
-    } else if (customPath) {
-      pathData = customPath;
-      scaleX = width / viewBox[0];
-      scaleY = height / viewBox[1];
+    } else if (shapeCustomPath && width && height && shapeViewBox) {
+      pathData = shapeCustomPath;
+      scaleX = width / shapeViewBox[0];
+      scaleY = height / shapeViewBox[1];
     }
-    super(pathData, _objectSpread2(_objectSpread2({}, options), {}, {
+    const path = new Path(pathData, _objectSpread2(_objectSpread2({}, options), {}, {
       scaleX,
-      scaleY
+      scaleY,
+      left: 0,
+      top: 0,
+      hasControls: false,
+      hasBorders: false,
+      interactive: false,
+      strokeUniform: true,
+      evented: false
     }));
-    _defineProperty(this, "textbox", void 0);
-    _defineProperty(this, "shapePadding", [0, 30, 0, 30]);
-    _defineProperty(this, "textboxWidth", 0);
-    const padding = this.shapePadding;
-    this.textboxWidth = options.width * (options.scaleX || 1) - padding[1] - padding[3];
-    const textbox = new Textbox((options.text || {}).content || '', _objectSpread2(_objectSpread2({}, (options.text || {
-      style: {}
-    }).style), {}, {
-      width: this.textboxWidth,
-      textAlign: 'center',
+    const textbox = new OlpTextbox(mergeOptions.content, {
+      textAlign: mergeOptions.textAlign,
+      textAnchor: mergeOptions.textAnchor,
+      textBodyLIns: mergeOptions.textBodyLIns,
+      textBodyTIns: mergeOptions.textBodyTIns,
+      textBodyRIns: mergeOptions.textBodyRIns,
+      textBodyBIns: mergeOptions.textBodyBIns,
+      wrap: mergeOptions.wrap,
+      splitByGrapheme: mergeOptions.wrap,
       editable: true,
       left: 0,
       top: 0,
       seletable: true,
-      hasControls: false,
-      visible: options.text ? true : false,
-      splitByGrapheme: true,
+      visible: true,
       lockMovementX: true,
       lockMovementY: true,
-      hasBorders: false,
-      hoverCursor: 'text'
-    }));
+      hasControls: false,
+      hasBorders: true,
+      hoverCursor: 'text',
+      interactive: true,
+      borderColor: 'orange'
+    });
+    super([path, textbox], {
+      hasControls: true,
+      padding: 0,
+      hasBorders: true,
+      interactive: true,
+      subTargetCheck: true,
+      left: options.left,
+      top: options.top,
+      width: options.width,
+      height: options.height,
+      borderDashArray: undefined,
+      layoutManager: new LayoutManager(new OlpShapeLayoutStrategy())
+    });
+    _defineProperty(this, "textboxMaxWidth", 0);
+    Object.assign(this, mergeOptions);
+    this.setOptions(options);
     this.objectCaching = false;
-    this.textbox = textbox;
-    textbox.belongsToObject = this;
+    textbox.initDimensions();
+  }
+  getPathOptions() {
+    const {
+      shapeType,
+      shapeCustomPath,
+      shapeViewBox
+    } = this;
+    const {
+      width,
+      height
+    } = this;
+    let pathData = '';
+    let scaleX = 1;
+    let scaleY = 1;
+    if (shapeType) {
+      if (shapeType === 'rect') {
+        pathData = "M 0 0 L ".concat(width, " 0 L ").concat(width, " ").concat(height, " L 0 ").concat(height, " Z");
+      }
+    } else if (shapeCustomPath && width && height && shapeViewBox) {
+      pathData = shapeCustomPath;
+      scaleX = width / shapeViewBox[0];
+      scaleY = height / shapeViewBox[1];
+    }
+    return {
+      pathData,
+      scaleX,
+      scaleY
+    };
+  }
+  drawObject(ctx, forClipping, context) {
+    this._renderBackground(ctx);
+    this._render(ctx);
+    this._drawClipPath(ctx, this.clipPath, context);
   }
   _render(ctx) {
-    super._render(ctx);
-    this.shapePadding;
-    this.scaleY;
-    const textbox = this.textbox;
+    var _this$canvas;
+    const shape = this._objects[0];
+    const textbox = this._objects[1];
     ctx.save();
+    shape.render(ctx);
+    ctx.restore();
     const transform = ctx.getTransform();
-    ctx.setTransform(1, 0, 0, 1, transform.e, transform.f);
-    const textboxWidth = this.textboxWidth * this.scaleX;
-    textbox.set({
-      left: -textboxWidth / 2,
-      top: -textbox.height / 2,
-      width: textboxWidth
-    });
-    if (!textbox.canvas) {
-      textbox._set('canvas', this.canvas);
-    }
-    textbox.objectCaching = false;
+    ctx.save();
+    const retina = ((_this$canvas = this.canvas) === null || _this$canvas === void 0 ? void 0 : _this$canvas.getRetinaScaling()) || 1;
+    ctx.setTransform(retina, 0, 0, retina, transform.e, transform.f);
     textbox.render(ctx);
     ctx.restore();
   }
 }
 _defineProperty(OlpShape, "type", 'OlpShape');
+_defineProperty(OlpShape, "ownDefaults", olpshapeDefaultValues);
 classRegistry.setClass(OlpShape);
 classRegistry.setSVGClass(OlpShape);
 

@@ -121,10 +121,6 @@ export class OlpShape<
       textBodyBIns: mergeOptions.textBodyBIns,
       wrap: mergeOptions.wrap,
       splitByGrapheme: mergeOptions.wrap,
-      // width:
-      //   mergeOptions.width -
-      //   mergeOptions.textBodyLIns -
-      //   mergeOptions.textBodyRIns,
       editable: true,
       left: 0,
       top: 0,
@@ -189,15 +185,16 @@ export class OlpShape<
     this._drawClipPath(ctx, this.clipPath, context);
   }
   _render(ctx: CanvasRenderingContext2D): void {
-    this.dirty = true;
     const shape = this._objects[0] as Path;
     const textbox = this._objects[1] as Textbox;
     ctx.save();
     shape.render(ctx);
     ctx.restore();
 
+    const transform = ctx.getTransform();
     ctx.save();
-    textbox.objectCaching = false;
+    const retina = this.canvas?.getRetinaScaling() || 1;
+    ctx.setTransform(retina, 0, 0, retina, transform.e, transform.f);
     textbox.render(ctx);
     ctx.restore();
   }
