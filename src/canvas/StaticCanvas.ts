@@ -518,7 +518,6 @@ export class StaticCanvas<
    */
   requestRenderAll() {
     if (!this.nextRenderHandle && !this.disposed && !this.destroyed) {
-      console.log('requestRenderAll');
       this.nextRenderHandle = requestAnimFrame(() => this.renderAndReset());
     }
   }
@@ -562,7 +561,6 @@ export class StaticCanvas<
    * @param {Array} objects 要渲染的对象
    */
   renderCanvas(ctx: CanvasRenderingContext2D, objects: FabricObject[]) {
-    console.log('renderCanvas');
     if (this.destroyed) {
       // 检查画布是否已被销毁
       return; // 如果已销毁，直接返回

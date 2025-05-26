@@ -1,7 +1,12 @@
 import type { TClassProperties, TOptions } from '../../typedefs';
 import type { ITextEvents } from '../IText/ITextBehavior';
+import { JUSTIFY } from '../Text/constants';
 import { Textbox } from '../Textbox';
-import type { SerializedTextboxProps, TextboxProps } from '../Textbox';
+import type {
+  GraphemeData,
+  SerializedTextboxProps,
+  TextboxProps,
+} from '../Textbox';
 
 export const olptextboxDefaultValues: Partial<TClassProperties<OlpTextbox>> = {
   wrap: true,
@@ -83,163 +88,172 @@ export class OlpTextbox<
    * @private
    * @override
    */
-  // initDimensions() {
-  //   if (!this.initialized) {
-  //     return;
-  //   }
-  //   this.isEditing && this.initDelayedCursor();
-  //   this._clearCache();
-  //   // clear dynamicMinWidth as it will be different after we re-wrap line
-  //   this.dynamicMinWidth = 0;
-  //   this.textboxMaxWidth =
-  //     (this.group?.width || 0) * (this.group?.scaleX || 1) -
-  //     this.textBodyLIns -
-  //     this.textBodyRIns;
-  //   // wrap lines
-  //   this._styleMap = this._generateStyleMap(this._splitText());
-  //   // if after wrapping, the width is smaller than dynamicMinWidth, change the width and re-wrap
+  initDimensions() {
+    if (!this.initialized) {
+      return;
+    }
+    this.isEditing && this.initDelayedCursor();
+    this._clearCache();
+    // clear dynamicMinWidth as it will be different after we re-wrap line
+    this.dynamicMinWidth = 0;
+    this.textboxMaxWidth =
+      (this.group?.width || 0) * (this.group?.scaleX || 1) -
+      this.textBodyLIns -
+      this.textBodyRIns;
+    // wrap lines
+    this._styleMap = this._generateStyleMap(this._splitText());
+    // if after wrapping, the width is smaller than dynamicMinWidth, change the width and re-wrap
+    if (this.wrap) {
+      if (this.group) {
+        this._set(
+          'width',
+          this.group?.width! * (this.group?.scaleX || 1) -
+            this.textBodyLIns -
+            this.textBodyRIns,
+        );
+      }
+    } else {
+      if (this.width) {
+        if (this.width > this.maxLineWidth) {
+          this._set('width', Math.max(this.dynamicMinWidth, this.maxLineWidth));
+        }
+      } else {
+        this._set('width', Math.max(this.dynamicMinWidth, this.maxLineWidth));
+      }
+    }
 
-  //   if (this.width) {
-  //     if (this.width > this.maxLineWidth) {
-  //       this._set('width', Math.max(this.dynamicMinWidth, this.maxLineWidth));
-  //     }
-  //   } else {
-  //     this._set('width', Math.max(this.dynamicMinWidth, this.maxLineWidth));
-  //   }
+    if (this.textAlign.includes(JUSTIFY)) {
+      // once text is measured we need to make space fatter to make justified text.
+      this.enlargeSpaces();
+    }
+    // clear cache and re-calculate height
+    this.height = this.calcTextHeight();
+    this.calcLeftTop();
+  }
 
-  //   if (this.textAlign.includes(JUSTIFY)) {
-  //     // once text is measured we need to make space fatter to make justified text.
-  //     this.enlargeSpaces();
-  //   }
-  //   // clear cache and re-calculate height
-  //   this.height = this.calcTextHeight();
-  //   this.calcLeftTop();
-  // }
+  _wrapText(lines: string[], desiredWidth: number): string[][] {
+    this.maxLineWidth = 0;
+    return super._wrapText(lines, desiredWidth);
+  }
 
-  // _wrapText(lines: string[], desiredWidth: number): string[][] {
-  //   this.maxLineWidth = 0;
-  //   return super._wrapText(lines, desiredWidth);
-  // }
+  _wrapLine(
+    lineIndex: number,
+    desiredWidth: number,
+    { largestWordWidth, wordsData }: GraphemeData,
+    reservedSpace = 0,
+  ): string[][] {
+    const additionalSpace = this._getWidthOfCharSpacing(),
+      splitByGrapheme = this.splitByGrapheme,
+      graphemeLines = [],
+      infix = splitByGrapheme ? '' : ' ';
 
-  // _wrapLine(
-  //   lineIndex: number,
-  //   desiredWidth: number,
-  //   { largestWordWidth, wordsData }: GraphemeData,
-  //   reservedSpace = 0,
-  // ): string[][] {
-  //   const additionalSpace = this._getWidthOfCharSpacing(),
-  //     splitByGrapheme = this.splitByGrapheme,
-  //     graphemeLines = [],
-  //     infix = splitByGrapheme ? '' : ' ';
+    let lineWidth = 0,
+      line: string[] = [],
+      // spaces in different languages?
+      offset = 0,
+      infixWidth = 0,
+      lineJustStarted = true;
 
-  //   let lineWidth = 0,
-  //     line: string[] = [],
-  //     // spaces in different languages?
-  //     offset = 0,
-  //     infixWidth = 0,
-  //     lineJustStarted = true;
+    desiredWidth -= reservedSpace;
 
-  //   desiredWidth -= reservedSpace;
+    const maxWidth = Math.max(
+      desiredWidth,
+      largestWordWidth,
+      this.dynamicMinWidth,
+    );
+    // layout words
+    const data = wordsData[lineIndex];
+    offset = 0;
+    let i;
+    for (i = 0; i < data.length; i++) {
+      const { word, width: wordWidth } = data[i];
+      offset += word.length;
 
-  //   const maxWidth = Math.max(
-  //     desiredWidth,
-  //     largestWordWidth,
-  //     this.dynamicMinWidth,
-  //   );
-  //   // layout words
-  //   const data = wordsData[lineIndex];
-  //   offset = 0;
-  //   let i;
-  //   for (i = 0; i < data.length; i++) {
-  //     const { word, width: wordWidth } = data[i];
-  //     offset += word.length;
+      lineWidth += infixWidth + wordWidth - additionalSpace;
+      if (lineWidth > maxWidth && !lineJustStarted && this.wrap) {
+        graphemeLines.push(line);
+        line = [];
+        lineWidth = wordWidth;
+        lineJustStarted = true;
+      } else {
+        lineWidth += additionalSpace;
+      }
 
-  //     lineWidth += infixWidth + wordWidth - additionalSpace;
-  //     if (lineWidth > maxWidth && !lineJustStarted && this.wrap) {
-  //       graphemeLines.push(line);
-  //       line = [];
-  //       lineWidth = wordWidth;
-  //       lineJustStarted = true;
-  //     } else {
-  //       lineWidth += additionalSpace;
-  //     }
+      if (!lineJustStarted && !splitByGrapheme) {
+        line.push(infix);
+      }
+      line = line.concat(word);
 
-  //     if (!lineJustStarted && !splitByGrapheme) {
-  //       line.push(infix);
-  //     }
-  //     line = line.concat(word);
+      infixWidth = splitByGrapheme
+        ? 0
+        : this._measureWord([infix], lineIndex, offset);
+      offset++;
+      lineJustStarted = false;
+    }
 
-  //     infixWidth = splitByGrapheme
-  //       ? 0
-  //       : this._measureWord([infix], lineIndex, offset);
-  //     offset++;
-  //     lineJustStarted = false;
-  //   }
+    this.maxLineWidth = Math.max(this.maxLineWidth || 0, lineWidth);
 
-  //   this.maxLineWidth = Math.max(this.maxLineWidth || 0, lineWidth);
+    i && graphemeLines.push(line);
 
-  //   i && graphemeLines.push(line);
+    // TODO: this code is probably not necessary anymore.
+    // it can be moved out of this function since largestWordWidth is now
+    // known in advance
+    if (largestWordWidth + reservedSpace > this.dynamicMinWidth) {
+      this.dynamicMinWidth = largestWordWidth - additionalSpace + reservedSpace;
+    }
+    return graphemeLines;
+  }
 
-  //   // TODO: this code is probably not necessary anymore.
-  //   // it can be moved out of this function since largestWordWidth is now
-  //   // known in advance
-  //   if (largestWordWidth + reservedSpace > this.dynamicMinWidth) {
-  //     this.dynamicMinWidth = largestWordWidth - additionalSpace + reservedSpace;
-  //   }
-  //   return graphemeLines;
-  // }
+  calcLeftTop() {
+    const shape = this.group;
+    const actualWidth = shape?.width || 0;
+    const actualHeight = shape?.height || 0;
+    const halfWidth = actualWidth / 2;
+    const halfHeight = actualHeight / 2;
+    const textboxHalfWidth = this.width / 2;
+    const textboxHalfHeight = this.height / 2;
+    let left = 0;
+    let top = 0;
 
-  // calcLeftTop() {
-  //   const shape = this.group;
-  //   const actualWidth = shape?.width || 0;
-  //   const actualHeight = shape?.height || 0;
-  //   const halfWidth = actualWidth / 2;
-  //   const halfHeight = actualHeight / 2;
-  //   const textboxHalfWidth = this.width / 2;
-  //   const textboxHalfHeight = this.height / 2;
-  //   let left = 0;
-  //   let top = 0;
+    switch (this.textAnchor) {
+      case 'top':
+        left = this.setLeftPosition(halfWidth, textboxHalfWidth);
+        top = -halfHeight + this.textBodyTIns;
+        break;
+      case 'middle':
+        left = this.setLeftPosition(halfWidth, textboxHalfWidth);
+        top = -textboxHalfHeight;
+        break;
+      case 'bottom':
+        left = this.setLeftPosition(halfWidth, textboxHalfWidth);
+        top = halfHeight - this.height - this.textBodyBIns;
+        break;
+      case 'topCenter':
+        left = -textboxHalfWidth;
+        top = -halfHeight + this.textBodyTIns;
+        break;
+      case 'middleCenter':
+        left = -textboxHalfWidth;
+        top = -textboxHalfHeight;
+        break;
+      case 'bottomCenter':
+        left = -textboxHalfWidth;
+        top = halfHeight - this.height - this.textBodyBIns;
+        break;
+    }
+    this._set('left', left);
+    this._set('top', top);
+  }
 
-  //   switch (this.textAnchor) {
-  //     case 'top':
-  //       left = this.setLeftPosition(halfWidth, textboxHalfWidth);
-  //       top = -halfHeight + this.textBodyTIns;
-  //       break;
-  //     case 'middle':
-  //       left = this.setLeftPosition(halfWidth, textboxHalfWidth);
-  //       top = -textboxHalfHeight;
-  //       break;
-  //     case 'bottom':
-  //       left = this.setLeftPosition(halfWidth, textboxHalfWidth);
-  //       top = halfHeight - this.height - this.textBodyBIns;
-  //       break;
-  //     case 'topCenter':
-  //       left = -textboxHalfWidth;
-  //       top = -halfHeight + this.textBodyTIns;
-  //       break;
-  //     case 'middleCenter':
-  //       left = -textboxHalfWidth;
-  //       top = -textboxHalfHeight;
-  //       break;
-  //     case 'bottomCenter':
-  //       left = -textboxHalfWidth;
-  //       top = halfHeight - this.height - this.textBodyBIns;
-  //       break;
-  //   }
-  //   // this.set({ left, top });
-  //   this._set('left', left);
-  //   this._set('top', top);
-  // }
-
-  // private setLeftPosition(halfWidth: number, textboxHalfWidth: number): number {
-  //   let left = 0;
-  //   if (this.textAlign === 'center') {
-  //     left = -textboxHalfWidth;
-  //   } else if (this.textAlign === 'right') {
-  //     left = halfWidth - this.width - this.textBodyRIns;
-  //   } else {
-  //     left = -halfWidth + this.textBodyLIns;
-  //   }
-  //   return left;
-  // }
+  private setLeftPosition(halfWidth: number, textboxHalfWidth: number): number {
+    let left = 0;
+    if (this.textAlign === 'center') {
+      left = -textboxHalfWidth;
+    } else if (this.textAlign === 'right') {
+      left = halfWidth - this.width - this.textBodyRIns;
+    } else {
+      left = -halfWidth + this.textBodyLIns;
+    }
+    return left;
+  }
 }

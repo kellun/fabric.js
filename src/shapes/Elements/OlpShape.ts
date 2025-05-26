@@ -1,7 +1,6 @@
 import { Path } from '../Path';
 import { classRegistry } from '../../ClassRegistry';
 import type { TextboxProps } from '../Textbox';
-import type { Textbox } from '../Textbox';
 import type { TOptions, TClassProperties } from '../../typedefs';
 import type { SerializedObjectProps } from '../Object/types';
 import type { GroupProps } from '../Group';
@@ -124,6 +123,8 @@ export class OlpShape<
       editable: true,
       left: 0,
       top: 0,
+      width:
+        options.width! - mergeOptions.textBodyLIns - mergeOptions.textBodyRIns,
       seletable: true,
       visible: true,
       lockMovementX: true,
@@ -186,7 +187,7 @@ export class OlpShape<
   }
   _render(ctx: CanvasRenderingContext2D): void {
     const shape = this._objects[0] as Path;
-    const textbox = this._objects[1] as Textbox;
+    const textbox = this._objects[1] as OlpTextbox;
     ctx.save();
     shape.render(ctx);
     ctx.restore();
@@ -195,7 +196,17 @@ export class OlpShape<
     ctx.save();
     const retina = this.canvas?.getRetinaScaling() || 1;
     ctx.setTransform(retina, 0, 0, retina, transform.e, transform.f);
-    textbox.render(ctx);
+    if (textbox.wrap) {
+      console.log(
+        this,
+        this.width * this.scaleX - textbox.textBodyLIns - textbox.textBodyRIns,
+      );
+      textbox.set(
+        'width',
+        this.width * this.scaleX - textbox.textBodyLIns - textbox.textBodyRIns,
+      );
+      textbox.render(ctx);
+    }
     ctx.restore();
   }
 }

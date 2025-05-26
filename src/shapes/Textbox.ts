@@ -528,6 +528,7 @@ export class Textbox<
    */
   _splitTextIntoLines(text: string) {
     // 调用父类方法进行初步的文本分割
+    console.log('_splitTextIntoLines', this.width);
     const newText = super._splitTextIntoLines(text),
       // 根据当前宽度对文本进行自动换行处理
       graphemeLines = this._wrapText(newText.lines, this.width),

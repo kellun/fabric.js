@@ -3462,7 +3462,6 @@ let StaticCanvas$1 = class StaticCanvas extends createCollectionMixin(CommonMeth
    */
   requestRenderAll() {
     if (!this.nextRenderHandle && !this.disposed && !this.destroyed) {
-      console.log('requestRenderAll');
       this.nextRenderHandle = requestAnimFrame(() => this.renderAndReset());
     }
   }
@@ -3510,7 +3509,6 @@ let StaticCanvas$1 = class StaticCanvas extends createCollectionMixin(CommonMeth
    * @param {Array} objects 要渲染的对象
    */
   renderCanvas(ctx, objects) {
-    console.log('renderCanvas');
     if (this.destroyed) {
       // 检查画布是否已被销毁
       return; // 如果已销毁，直接返回
@@ -7021,7 +7019,6 @@ let FabricObject$1 = class FabricObject extends ObjectGeometry {
   transform(ctx) {
     const needFullTransform = this.group && !this.group._transformDone || this.group && this.canvas && ctx === this.canvas.contextTop;
     const m = this.calcTransformMatrix(!needFullTransform);
-    console.log(this.type);
     ctx.transform(m[0], m[1], m[2], m[3], m[4], m[5]);
   }
 
@@ -23914,6 +23911,7 @@ class Textbox extends IText {
    */
   _splitTextIntoLines(text) {
     // 调用父类方法进行初步的文本分割
+    console.log('_splitTextIntoLines', this.width);
     const newText = super._splitTextIntoLines(text),
       // 根据当前宽度对文本进行自动换行处理
       graphemeLines = this._wrapText(newText.lines, this.width),
@@ -25419,165 +25417,151 @@ class OlpTextbox extends Textbox {
    * @private
    * @override
    */
-  // initDimensions() {
-  //   if (!this.initialized) {
-  //     return;
-  //   }
-  //   this.isEditing && this.initDelayedCursor();
-  //   this._clearCache();
-  //   // clear dynamicMinWidth as it will be different after we re-wrap line
-  //   this.dynamicMinWidth = 0;
-  //   this.textboxMaxWidth =
-  //     (this.group?.width || 0) * (this.group?.scaleX || 1) -
-  //     this.textBodyLIns -
-  //     this.textBodyRIns;
-  //   // wrap lines
-  //   this._styleMap = this._generateStyleMap(this._splitText());
-  //   // if after wrapping, the width is smaller than dynamicMinWidth, change the width and re-wrap
+  initDimensions() {
+    var _this$group, _this$group2;
+    if (!this.initialized) {
+      return;
+    }
+    this.isEditing && this.initDelayedCursor();
+    this._clearCache();
+    // clear dynamicMinWidth as it will be different after we re-wrap line
+    this.dynamicMinWidth = 0;
+    this.textboxMaxWidth = (((_this$group = this.group) === null || _this$group === void 0 ? void 0 : _this$group.width) || 0) * (((_this$group2 = this.group) === null || _this$group2 === void 0 ? void 0 : _this$group2.scaleX) || 1) - this.textBodyLIns - this.textBodyRIns;
+    // wrap lines
+    this._styleMap = this._generateStyleMap(this._splitText());
+    // if after wrapping, the width is smaller than dynamicMinWidth, change the width and re-wrap
+    if (this.wrap) {
+      if (this.group) {
+        var _this$group3, _this$group4;
+        this._set('width', ((_this$group3 = this.group) === null || _this$group3 === void 0 ? void 0 : _this$group3.width) * (((_this$group4 = this.group) === null || _this$group4 === void 0 ? void 0 : _this$group4.scaleX) || 1) - this.textBodyLIns - this.textBodyRIns);
+      }
+    } else {
+      if (this.width) {
+        if (this.width > this.maxLineWidth) {
+          this._set('width', Math.max(this.dynamicMinWidth, this.maxLineWidth));
+        }
+      } else {
+        this._set('width', Math.max(this.dynamicMinWidth, this.maxLineWidth));
+      }
+    }
+    if (this.textAlign.includes(JUSTIFY)) {
+      // once text is measured we need to make space fatter to make justified text.
+      this.enlargeSpaces();
+    }
+    // clear cache and re-calculate height
+    this.height = this.calcTextHeight();
+    this.calcLeftTop();
+  }
+  _wrapText(lines, desiredWidth) {
+    this.maxLineWidth = 0;
+    return super._wrapText(lines, desiredWidth);
+  }
+  _wrapLine(lineIndex, desiredWidth, _ref) {
+    let {
+      largestWordWidth,
+      wordsData
+    } = _ref;
+    let reservedSpace = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : 0;
+    const additionalSpace = this._getWidthOfCharSpacing(),
+      splitByGrapheme = this.splitByGrapheme,
+      graphemeLines = [],
+      infix = splitByGrapheme ? '' : ' ';
+    let lineWidth = 0,
+      line = [],
+      // spaces in different languages?
+      offset = 0,
+      infixWidth = 0,
+      lineJustStarted = true;
+    desiredWidth -= reservedSpace;
+    const maxWidth = Math.max(desiredWidth, largestWordWidth, this.dynamicMinWidth);
+    // layout words
+    const data = wordsData[lineIndex];
+    offset = 0;
+    let i;
+    for (i = 0; i < data.length; i++) {
+      const {
+        word,
+        width: wordWidth
+      } = data[i];
+      offset += word.length;
+      lineWidth += infixWidth + wordWidth - additionalSpace;
+      if (lineWidth > maxWidth && !lineJustStarted && this.wrap) {
+        graphemeLines.push(line);
+        line = [];
+        lineWidth = wordWidth;
+        lineJustStarted = true;
+      } else {
+        lineWidth += additionalSpace;
+      }
+      if (!lineJustStarted && !splitByGrapheme) {
+        line.push(infix);
+      }
+      line = line.concat(word);
+      infixWidth = splitByGrapheme ? 0 : this._measureWord([infix], lineIndex, offset);
+      offset++;
+      lineJustStarted = false;
+    }
+    this.maxLineWidth = Math.max(this.maxLineWidth || 0, lineWidth);
+    i && graphemeLines.push(line);
 
-  //   if (this.width) {
-  //     if (this.width > this.maxLineWidth) {
-  //       this._set('width', Math.max(this.dynamicMinWidth, this.maxLineWidth));
-  //     }
-  //   } else {
-  //     this._set('width', Math.max(this.dynamicMinWidth, this.maxLineWidth));
-  //   }
-
-  //   if (this.textAlign.includes(JUSTIFY)) {
-  //     // once text is measured we need to make space fatter to make justified text.
-  //     this.enlargeSpaces();
-  //   }
-  //   // clear cache and re-calculate height
-  //   this.height = this.calcTextHeight();
-  //   this.calcLeftTop();
-  // }
-
-  // _wrapText(lines: string[], desiredWidth: number): string[][] {
-  //   this.maxLineWidth = 0;
-  //   return super._wrapText(lines, desiredWidth);
-  // }
-
-  // _wrapLine(
-  //   lineIndex: number,
-  //   desiredWidth: number,
-  //   { largestWordWidth, wordsData }: GraphemeData,
-  //   reservedSpace = 0,
-  // ): string[][] {
-  //   const additionalSpace = this._getWidthOfCharSpacing(),
-  //     splitByGrapheme = this.splitByGrapheme,
-  //     graphemeLines = [],
-  //     infix = splitByGrapheme ? '' : ' ';
-
-  //   let lineWidth = 0,
-  //     line: string[] = [],
-  //     // spaces in different languages?
-  //     offset = 0,
-  //     infixWidth = 0,
-  //     lineJustStarted = true;
-
-  //   desiredWidth -= reservedSpace;
-
-  //   const maxWidth = Math.max(
-  //     desiredWidth,
-  //     largestWordWidth,
-  //     this.dynamicMinWidth,
-  //   );
-  //   // layout words
-  //   const data = wordsData[lineIndex];
-  //   offset = 0;
-  //   let i;
-  //   for (i = 0; i < data.length; i++) {
-  //     const { word, width: wordWidth } = data[i];
-  //     offset += word.length;
-
-  //     lineWidth += infixWidth + wordWidth - additionalSpace;
-  //     if (lineWidth > maxWidth && !lineJustStarted && this.wrap) {
-  //       graphemeLines.push(line);
-  //       line = [];
-  //       lineWidth = wordWidth;
-  //       lineJustStarted = true;
-  //     } else {
-  //       lineWidth += additionalSpace;
-  //     }
-
-  //     if (!lineJustStarted && !splitByGrapheme) {
-  //       line.push(infix);
-  //     }
-  //     line = line.concat(word);
-
-  //     infixWidth = splitByGrapheme
-  //       ? 0
-  //       : this._measureWord([infix], lineIndex, offset);
-  //     offset++;
-  //     lineJustStarted = false;
-  //   }
-
-  //   this.maxLineWidth = Math.max(this.maxLineWidth || 0, lineWidth);
-
-  //   i && graphemeLines.push(line);
-
-  //   // TODO: this code is probably not necessary anymore.
-  //   // it can be moved out of this function since largestWordWidth is now
-  //   // known in advance
-  //   if (largestWordWidth + reservedSpace > this.dynamicMinWidth) {
-  //     this.dynamicMinWidth = largestWordWidth - additionalSpace + reservedSpace;
-  //   }
-  //   return graphemeLines;
-  // }
-
-  // calcLeftTop() {
-  //   const shape = this.group;
-  //   const actualWidth = shape?.width || 0;
-  //   const actualHeight = shape?.height || 0;
-  //   const halfWidth = actualWidth / 2;
-  //   const halfHeight = actualHeight / 2;
-  //   const textboxHalfWidth = this.width / 2;
-  //   const textboxHalfHeight = this.height / 2;
-  //   let left = 0;
-  //   let top = 0;
-
-  //   switch (this.textAnchor) {
-  //     case 'top':
-  //       left = this.setLeftPosition(halfWidth, textboxHalfWidth);
-  //       top = -halfHeight + this.textBodyTIns;
-  //       break;
-  //     case 'middle':
-  //       left = this.setLeftPosition(halfWidth, textboxHalfWidth);
-  //       top = -textboxHalfHeight;
-  //       break;
-  //     case 'bottom':
-  //       left = this.setLeftPosition(halfWidth, textboxHalfWidth);
-  //       top = halfHeight - this.height - this.textBodyBIns;
-  //       break;
-  //     case 'topCenter':
-  //       left = -textboxHalfWidth;
-  //       top = -halfHeight + this.textBodyTIns;
-  //       break;
-  //     case 'middleCenter':
-  //       left = -textboxHalfWidth;
-  //       top = -textboxHalfHeight;
-  //       break;
-  //     case 'bottomCenter':
-  //       left = -textboxHalfWidth;
-  //       top = halfHeight - this.height - this.textBodyBIns;
-  //       break;
-  //   }
-  //   // this.set({ left, top });
-  //   this._set('left', left);
-  //   this._set('top', top);
-  // }
-
-  // private setLeftPosition(halfWidth: number, textboxHalfWidth: number): number {
-  //   let left = 0;
-  //   if (this.textAlign === 'center') {
-  //     left = -textboxHalfWidth;
-  //   } else if (this.textAlign === 'right') {
-  //     left = halfWidth - this.width - this.textBodyRIns;
-  //   } else {
-  //     left = -halfWidth + this.textBodyLIns;
-  //   }
-  //   return left;
-  // }
+    // TODO: this code is probably not necessary anymore.
+    // it can be moved out of this function since largestWordWidth is now
+    // known in advance
+    if (largestWordWidth + reservedSpace > this.dynamicMinWidth) {
+      this.dynamicMinWidth = largestWordWidth - additionalSpace + reservedSpace;
+    }
+    return graphemeLines;
+  }
+  calcLeftTop() {
+    const shape = this.group;
+    const actualWidth = (shape === null || shape === void 0 ? void 0 : shape.width) || 0;
+    const actualHeight = (shape === null || shape === void 0 ? void 0 : shape.height) || 0;
+    const halfWidth = actualWidth / 2;
+    const halfHeight = actualHeight / 2;
+    const textboxHalfWidth = this.width / 2;
+    const textboxHalfHeight = this.height / 2;
+    let left = 0;
+    let top = 0;
+    switch (this.textAnchor) {
+      case 'top':
+        left = this.setLeftPosition(halfWidth, textboxHalfWidth);
+        top = -halfHeight + this.textBodyTIns;
+        break;
+      case 'middle':
+        left = this.setLeftPosition(halfWidth, textboxHalfWidth);
+        top = -textboxHalfHeight;
+        break;
+      case 'bottom':
+        left = this.setLeftPosition(halfWidth, textboxHalfWidth);
+        top = halfHeight - this.height - this.textBodyBIns;
+        break;
+      case 'topCenter':
+        left = -textboxHalfWidth;
+        top = -halfHeight + this.textBodyTIns;
+        break;
+      case 'middleCenter':
+        left = -textboxHalfWidth;
+        top = -textboxHalfHeight;
+        break;
+      case 'bottomCenter':
+        left = -textboxHalfWidth;
+        top = halfHeight - this.height - this.textBodyBIns;
+        break;
+    }
+    this._set('left', left);
+    this._set('top', top);
+  }
+  setLeftPosition(halfWidth, textboxHalfWidth) {
+    let left = 0;
+    if (this.textAlign === 'center') {
+      left = -textboxHalfWidth;
+    } else if (this.textAlign === 'right') {
+      left = halfWidth - this.width - this.textBodyRIns;
+    } else {
+      left = -halfWidth + this.textBodyLIns;
+    }
+    return left;
+  }
 }
 _defineProperty(OlpTextbox, "ownDefaults", olptextboxDefaultValues);
 _defineProperty(OlpTextbox, "type", 'OlpTextbox');
@@ -25644,6 +25628,7 @@ class OlpShape extends Group {
       editable: true,
       left: 0,
       top: 0,
+      width: options.width - mergeOptions.textBodyLIns - mergeOptions.textBodyRIns,
       seletable: true,
       visible: true,
       lockMovementX: true,
@@ -25717,7 +25702,11 @@ class OlpShape extends Group {
     ctx.save();
     const retina = ((_this$canvas = this.canvas) === null || _this$canvas === void 0 ? void 0 : _this$canvas.getRetinaScaling()) || 1;
     ctx.setTransform(retina, 0, 0, retina, transform.e, transform.f);
-    textbox.render(ctx);
+    if (textbox.wrap) {
+      console.log(this, this.width * this.scaleX - textbox.textBodyLIns - textbox.textBodyRIns);
+      textbox.set('width', this.width * this.scaleX - textbox.textBodyLIns - textbox.textBodyRIns);
+      textbox.render(ctx);
+    }
     ctx.restore();
   }
 }
