@@ -5,9 +5,9 @@ export { config } from './src/config';
 export { classRegistry } from './src/ClassRegistry';
 export { runningAnimations } from './src/util/animation/AnimationRegistry';
 
-export * from './src/typedefs';
+export type * from './src/typedefs';
 
-export * from './src/EventTypeDefs';
+export type * from './src/EventTypeDefs';
 export type { ITextEvents } from './src/shapes/IText/ITextBehavior';
 
 export { Observable } from './src/Observable';
@@ -28,7 +28,7 @@ export { Point } from './src/Point';
 export type { IntersectionType } from './src/Intersection';
 export { Intersection } from './src/Intersection';
 export { Color } from './src/color/Color';
-export * from './src/color/typedefs';
+export type * from './src/color/typedefs';
 
 export * from './src/gradient';
 export * from './src/Pattern';
@@ -36,7 +36,7 @@ export { Shadow } from './src/Shadow';
 export type { SerializedShadowOptions } from './src/Shadow';
 
 export { BaseBrush } from './src/brushes/BaseBrush';
-export * from './src/brushes/typedefs';
+export type * from './src/brushes/typedefs';
 
 export { PencilBrush } from './src/brushes/PencilBrush';
 export { CircleBrush } from './src/brushes/CircleBrush';
@@ -169,6 +169,7 @@ export type {
   ImageProps,
 } from './src/shapes/Image';
 export { OlpShape } from './src/shapes/Elements/OlpShape';
+export { OlpTable } from './src/shapes/Elements/OlpTable';
 export { createCollectionMixin } from './src/Collection';
 
 export * as util from './src/util';

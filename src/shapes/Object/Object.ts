@@ -451,7 +451,7 @@ export class FabricObject<
   _getCacheCanvasDimensions(): TCacheCanvasDimensions {
     const objectScale = this.getTotalObjectScaling(),
       // calculate dimensions without skewing
-      dim = this._getTransformedDimensions({ skewX: 0, skewY: 0 }),
+      dim = this._getTransformedDimensionsWithStroke({ skewX: 0, skewY: 0 }),
       neededX = (dim.x * objectScale.x) / this.scaleX,
       neededY = (dim.y * objectScale.y) / this.scaleY;
     return {
@@ -687,6 +687,7 @@ export class FabricObject<
       this.drawObject(ctx, false, {}); // 绘制对象
       this.dirty = false; // 标记对象为干净状态
     }
+
     ctx.restore(); // 恢复上下文状态
   }
 

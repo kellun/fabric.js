@@ -655,7 +655,34 @@ export class ObjectGeometry<EventSpec extends ObjectEvents = ObjectEvents>
       );
     }
 
-    return finalDimensions.scalarAdd(postScalingStrokeValue);
+    // return finalDimensions.scalarAdd(postScalingStrokeValue);
+    return finalDimensions;
+  }
+
+  _getTransformedDimensionsWithStroke(options: any = {}): Point {
+    const dimOptions = {
+      // if scaleX or scaleY are negative numbers,
+      // this will return dimensions that are negative.
+      // and this will break assumptions around the codebase
+      scaleX: this.scaleX,
+      scaleY: this.scaleY,
+      skewX: this.skewX,
+      skewY: this.skewY,
+      width: this.width,
+      height: this.height,
+      strokeWidth: this.strokeWidth,
+      // TODO remove this spread. is visible in the performance inspection
+      ...options,
+    };
+    const strokeWidth = dimOptions.strokeWidth;
+    let postScalingStrokeValue = 0;
+
+    if (this.strokeUniform) {
+      postScalingStrokeValue = strokeWidth;
+    }
+    return this._getTransformedDimensions(options).scalarAdd(
+      postScalingStrokeValue,
+    );
   }
 
   /**
