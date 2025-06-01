@@ -1,5 +1,8 @@
-import type { TClassProperties, TOptions } from '../../typedefs';
+import type { TClassProperties, TMat2D, TOptions } from '../../typedefs';
+import { multiplyTransformMatrices, qrDecompose } from '../../util/misc/matrix';
+import { degreesToRadians } from '../../util/misc/radiansDegreesConversion';
 import type { ITextEvents } from '../IText/ITextBehavior';
+import { TStyleOverride } from '../Object/InteractiveObject';
 import { JUSTIFY } from '../Text/constants';
 import { Textbox } from '../Textbox';
 import type {
@@ -243,6 +246,82 @@ export class OlpTextbox<
     }
     this._set('left', left);
     this._set('top', top);
+  }
+
+  _renderControls(
+    ctx: CanvasRenderingContext2D,
+    styleOverride: TStyleOverride = {},
+  ) {
+    const { hasBorders, hasControls } = this; // 获取对象的边框和控制元素的状态
+    const styleOptions = {
+      hasBorders,
+      hasControls,
+      ...styleOverride, // 合并样式覆盖选项
+    };
+    const vpt = this.getViewportTransform(), // 获取视口变换
+      shouldDrawBorders = styleOptions.hasBorders, // 是否绘制边框
+      shouldDrawControls = styleOptions.hasControls; // 是否绘制控制元素
+    const matrix = multiplyTransformMatrices(vpt, this.calcTransformMatrix()); // 计算变换矩阵
+    const options = qrDecompose(matrix); // 分解矩阵以获取平移和旋转信息
+    ctx.save(); // 保存当前上下文状态
+    ctx.translate(options.translateX, options.translateY); // 应用平移
+    ctx.lineWidth = this.borderScaleFactor; // 设置边框线宽
+
+    // 检查对象是否在组中并需要控制元素
+    if (this.group === this.parent) {
+      ctx.globalAlpha = this.isMoving ? this.borderOpacityWhenMoving : 1; // 设置透明度
+    }
+    if (this.flipX) {
+      options.angle -= 180; // 如果对象水平翻转，调整角度
+    }
+    ctx.rotate(degreesToRadians(this.group ? options.angle : this.angle)); // 应用旋转
+
+    // 根据条件绘制边框和控制元素
+    shouldDrawBorders && this.drawBorders(ctx, options, styleOverride); // 绘制边框
+    shouldDrawControls && this.drawControls(ctx, styleOverride); // 绘制控制元素
+    ctx.restore(); // 恢复上下文状态
+  }
+
+  calcTransformMatrix(skipGroup = false): TMat2D {
+    // 首先计算对象自身的变换矩阵
+    let ownMatrix = this.calcOwnMatrix();
+    let matrix = ownMatrix;
+    // 如果跳过组变换或者对象没有父组，则直接返回对象自身的变换矩阵
+    if (skipGroup || !this.group) {
+      return matrix;
+    }
+    // 计算包含组变换的键，用于缓存检查
+    const key = this.transformMatrixKey(skipGroup),
+      // 获取矩阵缓存
+      cache = this.matrixCache;
+    // 检查缓存是否存在且键匹配
+    if (cache && cache.key.every((x, i) => x === key[i])) {
+      // 如果缓存存在且键匹配，则返回缓存中的矩阵
+      return cache.value;
+    }
+    // 如果对象有父组，则将组的变换矩阵与对象自身的变换矩阵相乘
+    if (this.group) {
+      matrix = multiplyTransformMatrices(
+        // 计算父组的变换矩阵
+        this.group.calcTransformMatrix(false),
+        matrix,
+      );
+    }
+    const listMatrix: TMat2D = [
+      ownMatrix[0],
+      ownMatrix[1],
+      ownMatrix[2],
+      ownMatrix[3],
+      matrix[4],
+      matrix[5],
+    ];
+    // 更新矩阵缓存
+    this.matrixCache = {
+      key,
+      value: listMatrix,
+    };
+    // 返回最终的变换矩阵
+    return listMatrix;
   }
 
   private setLeftPosition(halfWidth: number, textboxHalfWidth: number): number {

@@ -82,7 +82,7 @@ export class OlpShape<
     const mergeOptions: any = {
       ...olpshapeDefaultValues,
       ...options,
-      hasBorders: false,
+      storkeWidth: 0,
     };
     const { shapeType, shapeCustomPath, shapeViewBox, width, height } =
       mergeOptions;
@@ -147,10 +147,10 @@ export class OlpShape<
       width: options.width,
       height: options.height,
       borderDashArray: undefined,
+      borderColor: 'yellow',
       layoutManager: new LayoutManager(new OlpShapeLayoutStrategy()),
     });
-    Object.assign(this, mergeOptions);
-    this.setOptions(options);
+    this.setOptions(mergeOptions);
     this.objectCaching = false;
     textbox.initDimensions();
   }
@@ -197,10 +197,7 @@ export class OlpShape<
     const retina = this.canvas?.getRetinaScaling() || 1;
     ctx.setTransform(retina, 0, 0, retina, transform.e, transform.f);
     if (textbox.wrap) {
-      console.log(
-        this,
-        this.width * this.scaleX - textbox.textBodyLIns - textbox.textBodyRIns,
-      );
+      console.log(this, textbox.width);
       textbox.set(
         'width',
         this.width * this.scaleX - textbox.textBodyLIns - textbox.textBodyRIns,
