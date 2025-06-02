@@ -655,6 +655,17 @@ export class ObjectGeometry<EventSpec extends ObjectEvents = ObjectEvents>
       );
     }
 
+    return finalDimensions;
+  }
+
+  _getTransformedDimensionsWithScalar(options: any = {}): Point {
+    const strokeWidth = options.strokeWidth || this.strokeWidth;
+    let postScalingStrokeValue = 0;
+
+    if (this.strokeUniform) {
+      postScalingStrokeValue = strokeWidth;
+    }
+    const finalDimensions = this._getTransformedDimensions(options);
     return finalDimensions.scalarAdd(postScalingStrokeValue);
   }
 

@@ -134,6 +134,7 @@ export class OlpShape<
       hoverCursor: 'text',
       interactive: true,
       borderColor: 'orange',
+      strokeUniform: true,
     });
 
     super([path, textbox], {
@@ -149,6 +150,7 @@ export class OlpShape<
       borderDashArray: undefined,
       borderColor: 'yellow',
       layoutManager: new LayoutManager(new OlpShapeLayoutStrategy()),
+      strokeUniform: true,
     });
     this.setOptions(mergeOptions);
     this.objectCaching = false;
