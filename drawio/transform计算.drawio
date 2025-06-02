@@ -1,0 +1,73 @@
+<mxfile host="65bd71144e">
+    <diagram id="ul2SEWiiKsXkmshR1DZM" name="第 1 页">
+        <mxGraphModel dx="876" dy="859" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="2" value="开始" style="ellipse;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+                    <mxGeometry x="300" y="20" width="80" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="3" value="收集对象变换参数 left, top, width, height originX, originY, angle scaleX, scaleY, skewX, skewY&amp;nbsp;&lt;div&gt;代码 const {left, top, width, height, originX, originY, angle, scaleX, scaleY, skewX, skewY} = obj;&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+                    <mxGeometry x="180" y="80" width="340" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="4" value="计算变换中心点 (cx, cy) centerX = left + width * 0.5 * scaleX centerY = top + height * 0.5 * scaleY&amp;nbsp;&lt;div&gt;// 代码 const cx = width * 0.5; const cy = height * 0.5;&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+                    <mxGeometry x="180" y="170" width="340" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="5" value="平移到 (left, top)&amp;nbsp;&lt;div&gt;数学: T = [[1,0,left],[0,1,top],[0,0,1]]&amp;nbsp;&lt;div&gt;// 代码 ctx.translate(left, top);&lt;/div&gt;&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+                    <mxGeometry x="180" y="260" width="340" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="6" value="平移到中心点 (cx, cy)&amp;nbsp;&lt;div&gt;数学: T = [[1,0,cx],[0,1,cy],[0,0,1]]&amp;nbsp;&lt;/div&gt;&lt;div&gt;// 代码 ctx.translate(cx, cy);&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+                    <mxGeometry x="180" y="330" width="340" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="7" value="旋转&amp;nbsp;&lt;div&gt;数学: R = [[cosθ,-sinθ,0],[sinθ,cosθ,0],[0,0,1]]&amp;nbsp;&lt;/div&gt;&lt;div&gt;// 代码 ctx.rotate(fabric.util.degreesToRadians(angle));&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+                    <mxGeometry x="180" y="400" width="340" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="8" value="缩放&amp;nbsp;&lt;div&gt;数学: S = [[scaleX,0,0],[0,scaleY,0],[0,0,1]]&amp;nbsp;&lt;/div&gt;&lt;div&gt;// 代码 ctx.scale(scaleX, scaleY);&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+                    <mxGeometry x="180" y="470" width="340" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="9" value="倾斜&amp;nbsp;&lt;div&gt;数学: K = [[1,tan(skewX),0],[tan(skewY),1,0],[0,0,1]]&amp;nbsp;&lt;/div&gt;&lt;div&gt;// 代码 ctx.transform(1, Math.tan(fabric.util.degreesToRadians(skewY)),               Math.tan(fabric.util.degreesToRadians(skewX)), 1, 0, 0);&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+                    <mxGeometry x="180" y="540" width="340" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="10" value="平移回原点 (-cx, -cy)&amp;nbsp;&lt;div&gt;数学: T = [[1,0,-cx],[0,1,-cy],[0,0,1]]&amp;nbsp;&lt;/div&gt;&lt;div&gt;// 代码 ctx.translate(-cx, -cy);&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+                    <mxGeometry x="180" y="630" width="340" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="11" value="组合所有变换 M = T_left,top * T_center * R * S * K * T_-center // 代码 // fabric.js 内部用 multiplyTransformMatrices 组合 // 最终 ctx.transform(a,b,c,d,e,f)" style="rounded=1;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+                    <mxGeometry x="180" y="700" width="340" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="12" value="结束" style="ellipse;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+                    <mxGeometry x="300" y="800" width="80" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="13" style="edgeStyle=orthogonalEdgeStyle;endArrow=block;html=1;" parent="1" source="2" target="3" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="14" style="edgeStyle=orthogonalEdgeStyle;endArrow=block;html=1;" parent="1" source="3" target="4" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="15" style="edgeStyle=orthogonalEdgeStyle;endArrow=block;html=1;" parent="1" source="4" target="5" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="16" style="edgeStyle=orthogonalEdgeStyle;endArrow=block;html=1;" parent="1" source="5" target="6" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="17" style="edgeStyle=orthogonalEdgeStyle;endArrow=block;html=1;" parent="1" source="6" target="7" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="18" style="edgeStyle=orthogonalEdgeStyle;endArrow=block;html=1;" parent="1" source="7" target="8" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="19" style="edgeStyle=orthogonalEdgeStyle;endArrow=block;html=1;" parent="1" source="8" target="9" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="20" style="edgeStyle=orthogonalEdgeStyle;endArrow=block;html=1;" parent="1" source="9" target="10" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="21" style="edgeStyle=orthogonalEdgeStyle;endArrow=block;html=1;" parent="1" source="10" target="11" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="22" style="edgeStyle=orthogonalEdgeStyle;endArrow=block;html=1;" parent="1" source="11" target="12" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>
