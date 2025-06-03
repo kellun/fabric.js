@@ -451,7 +451,7 @@ export class FabricObject<
   _getCacheCanvasDimensions(): TCacheCanvasDimensions {
     const objectScale = this.getTotalObjectScaling(),
       // calculate dimensions without skewing
-      dim = this._getTransformedDimensionsWithStroke({ skewX: 0, skewY: 0 }),
+      dim = this._getTransformedDimensionsWithScalar({ skewX: 0, skewY: 0 }),
       neededX = (dim.x * objectScale.x) / this.scaleX,
       neededY = (dim.y * objectScale.y) / this.scaleY;
     return {

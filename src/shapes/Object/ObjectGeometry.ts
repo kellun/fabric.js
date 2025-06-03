@@ -631,12 +631,10 @@ export class ObjectGeometry<EventSpec extends ObjectEvents = ObjectEvents>
     };
     // stroke is applied before/after transformations are applied according to `strokeUniform`
     const strokeWidth = dimOptions.strokeWidth;
-    let preScalingStrokeValue = strokeWidth,
-      postScalingStrokeValue = 0;
+    let preScalingStrokeValue = strokeWidth;
 
     if (this.strokeUniform) {
       preScalingStrokeValue = 0;
-      postScalingStrokeValue = strokeWidth;
     }
     const dimX = dimOptions.width + preScalingStrokeValue,
       dimY = dimOptions.height + preScalingStrokeValue,
@@ -655,34 +653,18 @@ export class ObjectGeometry<EventSpec extends ObjectEvents = ObjectEvents>
       );
     }
 
-    // return finalDimensions.scalarAdd(postScalingStrokeValue);
     return finalDimensions;
   }
 
-  _getTransformedDimensionsWithStroke(options: any = {}): Point {
-    const dimOptions = {
-      // if scaleX or scaleY are negative numbers,
-      // this will return dimensions that are negative.
-      // and this will break assumptions around the codebase
-      scaleX: this.scaleX,
-      scaleY: this.scaleY,
-      skewX: this.skewX,
-      skewY: this.skewY,
-      width: this.width,
-      height: this.height,
-      strokeWidth: this.strokeWidth,
-      // TODO remove this spread. is visible in the performance inspection
-      ...options,
-    };
-    const strokeWidth = dimOptions.strokeWidth;
+  _getTransformedDimensionsWithScalar(options: any = {}): Point {
+    const strokeWidth = options.strokeWidth || this.strokeWidth;
     let postScalingStrokeValue = 0;
 
     if (this.strokeUniform) {
       postScalingStrokeValue = strokeWidth;
     }
-    return this._getTransformedDimensions(options).scalarAdd(
-      postScalingStrokeValue,
-    );
+    const finalDimensions = this._getTransformedDimensions(options);
+    return finalDimensions.scalarAdd(postScalingStrokeValue);
   }
 
   /**

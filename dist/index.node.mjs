@@ -6652,11 +6652,9 @@ class ObjectGeometry extends CommonMethods {
     }, options);
     // stroke is applied before/after transformations are applied according to `strokeUniform`
     const strokeWidth = dimOptions.strokeWidth;
-    let preScalingStrokeValue = strokeWidth,
-      postScalingStrokeValue = 0;
+    let preScalingStrokeValue = strokeWidth;
     if (this.strokeUniform) {
       preScalingStrokeValue = 0;
-      postScalingStrokeValue = strokeWidth;
     }
     const dimX = dimOptions.width + preScalingStrokeValue,
       dimY = dimOptions.height + preScalingStrokeValue,
@@ -6667,6 +6665,16 @@ class ObjectGeometry extends CommonMethods {
     } else {
       finalDimensions = sizeAfterTransform(dimX, dimY, calcDimensionsMatrix(dimOptions));
     }
+    return finalDimensions;
+  }
+  _getTransformedDimensionsWithScalar() {
+    let options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+    const strokeWidth = options.strokeWidth || this.strokeWidth;
+    let postScalingStrokeValue = 0;
+    if (this.strokeUniform) {
+      postScalingStrokeValue = strokeWidth;
+    }
+    const finalDimensions = this._getTransformedDimensions(options);
     return finalDimensions.scalarAdd(postScalingStrokeValue);
   }
 
@@ -6938,7 +6946,7 @@ let FabricObject$1 = class FabricObject extends ObjectGeometry {
   _getCacheCanvasDimensions() {
     const objectScale = this.getTotalObjectScaling(),
       // calculate dimensions without skewing
-      dim = this._getTransformedDimensions({
+      dim = this._getTransformedDimensionsWithScalar({
         skewX: 0,
         skewY: 0
       }),
@@ -25551,6 +25559,74 @@ class OlpTextbox extends Textbox {
     this._set('left', left);
     this._set('top', top);
   }
+  _renderControls(ctx) {
+    let styleOverride = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+    const {
+      hasBorders,
+      hasControls
+    } = this; // 获取对象的边框和控制元素的状态
+    const styleOptions = _objectSpread2({
+      hasBorders,
+      hasControls
+    }, styleOverride);
+    const vpt = this.getViewportTransform(),
+      // 获取视口变换
+      shouldDrawBorders = styleOptions.hasBorders,
+      // 是否绘制边框
+      shouldDrawControls = styleOptions.hasControls; // 是否绘制控制元素
+    const matrix = multiplyTransformMatrices(vpt, this.calcTransformMatrix()); // 计算变换矩阵
+    const options = qrDecompose(matrix); // 分解矩阵以获取平移和旋转信息
+    ctx.save(); // 保存当前上下文状态
+    ctx.translate(options.translateX, options.translateY); // 应用平移
+    ctx.lineWidth = this.borderScaleFactor; // 设置边框线宽
+
+    // 检查对象是否在组中并需要控制元素
+    if (this.group === this.parent) {
+      ctx.globalAlpha = this.isMoving ? this.borderOpacityWhenMoving : 1; // 设置透明度
+    }
+    if (this.flipX) {
+      options.angle -= 180; // 如果对象水平翻转，调整角度
+    }
+    ctx.rotate(degreesToRadians(this.group ? options.angle : this.angle)); // 应用旋转
+
+    // 根据条件绘制边框和控制元素
+    shouldDrawBorders && this.drawBorders(ctx, options, styleOverride); // 绘制边框
+    shouldDrawControls && this.drawControls(ctx, styleOverride); // 绘制控制元素
+    ctx.restore(); // 恢复上下文状态
+  }
+  calcTransformMatrix() {
+    let skipGroup = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : false;
+    // 首先计算对象自身的变换矩阵
+    let ownMatrix = this.calcOwnMatrix();
+    let matrix = ownMatrix;
+    // 如果跳过组变换或者对象没有父组，则直接返回对象自身的变换矩阵
+    if (skipGroup || !this.group) {
+      return matrix;
+    }
+    // 计算包含组变换的键，用于缓存检查
+    const key = this.transformMatrixKey(skipGroup),
+      // 获取矩阵缓存
+      cache = this.matrixCache;
+    // 检查缓存是否存在且键匹配
+    if (cache && cache.key.every((x, i) => x === key[i])) {
+      // 如果缓存存在且键匹配，则返回缓存中的矩阵
+      return cache.value;
+    }
+    // 如果对象有父组，则将组的变换矩阵与对象自身的变换矩阵相乘
+    if (this.group) {
+      matrix = multiplyTransformMatrices(
+      // 计算父组的变换矩阵
+      this.group.calcTransformMatrix(false), matrix);
+    }
+    const listMatrix = [ownMatrix[0], ownMatrix[1], ownMatrix[2], ownMatrix[3], matrix[4], matrix[5]];
+    // 更新矩阵缓存
+    this.matrixCache = {
+      key,
+      value: listMatrix
+    };
+    // 返回最终的变换矩阵
+    return listMatrix;
+  }
   setLeftPosition(halfWidth, textboxHalfWidth) {
     let left = 0;
     if (this.textAlign === 'center') {
@@ -25584,7 +25660,7 @@ const olpshapeDefaultValues = {
 class OlpShape extends Group {
   constructor(options) {
     const mergeOptions = _objectSpread2(_objectSpread2(_objectSpread2({}, olpshapeDefaultValues), options), {}, {
-      hasBorders: false
+      storkeWidth: 0
     });
     const {
       shapeType,
@@ -25637,7 +25713,8 @@ class OlpShape extends Group {
       hasBorders: true,
       hoverCursor: 'text',
       interactive: true,
-      borderColor: 'orange'
+      borderColor: 'orange',
+      strokeUniform: true
     });
     super([path, textbox], {
       hasControls: true,
@@ -25650,11 +25727,12 @@ class OlpShape extends Group {
       width: options.width,
       height: options.height,
       borderDashArray: undefined,
-      layoutManager: new LayoutManager(new OlpShapeLayoutStrategy())
+      borderColor: 'yellow',
+      layoutManager: new LayoutManager(new OlpShapeLayoutStrategy()),
+      strokeUniform: true
     });
     _defineProperty(this, "textboxMaxWidth", 0);
-    Object.assign(this, mergeOptions);
-    this.setOptions(options);
+    this.setOptions(mergeOptions);
     this.objectCaching = false;
     textbox.initDimensions();
   }
@@ -25703,7 +25781,7 @@ class OlpShape extends Group {
     const retina = ((_this$canvas = this.canvas) === null || _this$canvas === void 0 ? void 0 : _this$canvas.getRetinaScaling()) || 1;
     ctx.setTransform(retina, 0, 0, retina, transform.e, transform.f);
     if (textbox.wrap) {
-      console.log(this, this.width * this.scaleX - textbox.textBodyLIns - textbox.textBodyRIns);
+      console.log(this, textbox.width);
       textbox.set('width', this.width * this.scaleX - textbox.textBodyLIns - textbox.textBodyRIns);
       textbox.render(ctx);
     }
