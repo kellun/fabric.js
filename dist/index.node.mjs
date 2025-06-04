@@ -6528,9 +6528,7 @@ class ObjectGeometry extends CommonMethods {
     let skipGroup = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : false;
     // 首先计算对象自身的变换矩阵
     let matrix = this.calcOwnMatrix();
-    // console.log('this', this);
-    // console.log('matrix', matrix);
-    // console.log('skipGroup', skipGroup);
+
     // 如果跳过组变换或者对象没有父组，则直接返回对象自身的变换矩阵
     if (skipGroup || !this.group) {
       return matrix;
@@ -25793,6 +25791,502 @@ _defineProperty(OlpShape, "ownDefaults", olpshapeDefaultValues);
 classRegistry.setClass(OlpShape);
 classRegistry.setSVGClass(OlpShape);
 
+const olpTableDefaultValues = {
+  properties: {
+    firstRowHighlighted: true,
+    bandedRows: false,
+    styleId: 'SimpleTableStyle'
+  },
+  columns: [{
+    width: 100
+  },
+  // 第1列宽 100px
+  {
+    width: 150
+  },
+  // 第2列宽 150px
+  {
+    width: 120
+  } // 第3列宽 120px
+  ],
+  rows: [
+  // 表头行
+  {
+    height: 40,
+    // 行高 40px
+    cells: [{
+      content: {
+        paragraphs: [{
+          textRuns: [{
+            text: '标题1'
+          }]
+        }]
+      },
+      properties: {
+        fillColor: 'blue',
+        bold: true
+      }
+    }, {
+      content: {
+        paragraphs: [{
+          textRuns: [{
+            text: '标题2'
+          }]
+        }]
+      },
+      properties: {
+        fillColor: 'blue',
+        bold: true
+      }
+    }, {
+      content: {
+        paragraphs: [{
+          textRuns: [{
+            text: '标题3'
+          }]
+        }]
+      },
+      properties: {
+        fillColor: 'blue',
+        bold: true
+      }
+    }]
+  },
+  // 数据行
+  {
+    height: 30,
+    cells: [{
+      content: {
+        paragraphs: [{
+          textRuns: [{
+            text: '数据1'
+          }]
+        }]
+      }
+    }, {
+      content: {
+        paragraphs: [{
+          textRuns: [{
+            text: '数据2'
+          }]
+        }]
+      }
+    }, {
+      content: {
+        paragraphs: [{
+          textRuns: [{
+            text: '数据3'
+          }]
+        }]
+      }
+    }]
+  }]
+};
+class OlpTable extends Group {
+  // 存储所有单元格的Rect对象
+
+  static getDefaults() {
+    return _objectSpread2(_objectSpread2({}, super.getDefaults()), OlpTable.ownDefaults);
+  }
+
+  /**
+   * Constructor
+   * @param {Object} [options] Options object
+   */
+  constructor(options) {
+    super();
+    // 默认最小单元格高度
+    _defineProperty(this, "cells", []);
+    Object.assign(this, OlpTable.ownDefaults);
+    this.cellTextboxes = [];
+    this._calculateTableSize();
+    this.setOptions(options);
+    this._initializeTextboxes();
+    this._initializeCell();
+    this.add(...this.cells.flat()); // 添加所有单元格到Group中
+    this.add(...this.cellTextboxes.flat()); // 添加所有Textbox到Group中
+    console.log(this);
+  }
+
+  /**
+   * @private
+   * @param {CanvasRenderingContext2D} ctx Context to render on
+   */
+  _render(ctx) {
+    this._transformDone = true;
+    this._calculateTableSize();
+    super.render(ctx);
+    this._transformDone = false;
+  }
+  _renderTextboxes(ctx) {
+    ctx.save();
+    this.cellTextboxes.forEach((row, rowIndex) => {
+      row.forEach((textbox, colIndex) => {
+        if (textbox) {
+          // 更新Textbox位置和尺寸
+          textbox.set({
+            left: this._getCellLeft(colIndex),
+            top: this._getCellTop(rowIndex),
+            width: this._getCellWidth(colIndex, this.rows[rowIndex].cells[colIndex]),
+            height: this._getCellHeight(rowIndex, this.rows[rowIndex].cells[colIndex])
+          });
+
+          // 渲染Textbox
+          textbox.render(ctx);
+        }
+      });
+    });
+    ctx.restore();
+  }
+
+  /**
+   * 初始化所有单元格的Textbox
+   */
+  _initializeTextboxes() {
+    this.cellTextboxes = this.rows.map((row, rowIndex) => {
+      return row.cells.map((cell, colIndex) => {
+        var _cell$content, _cell$properties, _cell$properties2;
+        const text = ((_cell$content = cell.content) === null || _cell$content === void 0 || (_cell$content = _cell$content.paragraphs) === null || _cell$content === void 0 || (_cell$content = _cell$content[0]) === null || _cell$content === void 0 || (_cell$content = _cell$content.textRuns) === null || _cell$content === void 0 || (_cell$content = _cell$content[0]) === null || _cell$content === void 0 ? void 0 : _cell$content.text) || '';
+        return new Textbox(text, {
+          left: this._getCellLeft(colIndex),
+          top: this._getCellTop(rowIndex),
+          width: this._getCellWidth(colIndex, cell),
+          height: this._getCellHeight(rowIndex, cell),
+          fontSize: 12,
+          textAlign: 'center',
+          hasControls: false,
+          editable: true,
+          rowIndex,
+          colIndex,
+          rowSpan: ((_cell$properties = cell.properties) === null || _cell$properties === void 0 ? void 0 : _cell$properties.rowSpan) || 1,
+          colSpan: ((_cell$properties2 = cell.properties) === null || _cell$properties2 === void 0 ? void 0 : _cell$properties2.colSpan) || 1,
+          lockMovementY: true,
+          lockMovementX: true,
+          lockScalingX: true,
+          lockScalingY: true,
+          lockRotation: true,
+          lockSkewingX: true,
+          lockSkewingY: true
+        });
+      });
+    });
+    console.log('Initialized Textboxes:', this.cellTextboxes);
+  }
+  _initializeCell() {
+    let currentY = -this.height / 2; // 从顶部开始绘制
+    this.cells = this.rows.map((row, rowIndex) => {
+      let currentX = -this.width / 2; // 从左侧开始绘制
+      let cellIndex = 0;
+      const rows = row.cells.map((cell, colIndex) => {
+        var _cell$properties3, _cell$properties4, _cell$properties5;
+        // 跳过被合并的单元格
+        if (cellIndex < colIndex) {
+          currentX += this.columns[cellIndex].width;
+          cellIndex++;
+        }
+
+        // 计算单元格实际宽高（考虑合并和最小值）
+        const colSpan = ((_cell$properties3 = cell.properties) === null || _cell$properties3 === void 0 ? void 0 : _cell$properties3.colSpan) || 1;
+        const rowSpan = ((_cell$properties4 = cell.properties) === null || _cell$properties4 === void 0 ? void 0 : _cell$properties4.rowSpan) || 1;
+        let cellWidth = 0;
+        for (let i = 0; i < colSpan; i++) {
+          cellWidth += Math.max(this.columns[cellIndex + i].width, OlpTable.DEFAULT_MIN_CELL_WIDTH);
+        }
+        let cellHeight = 0;
+        for (let i = 0; i < rowSpan; i++) {
+          cellHeight += Math.max(this.rows[rowIndex + i].height, OlpTable.DEFAULT_MIN_CELL_HEIGHT);
+        }
+
+        // 创建单元格矩形
+        const cellRect = new Rect({
+          left: currentX,
+          top: currentY,
+          width: cellWidth,
+          height: cellHeight,
+          fill: ((_cell$properties5 = cell.properties) === null || _cell$properties5 === void 0 ? void 0 : _cell$properties5.fillColor) || '#f0f0f0',
+          // 默认填充色
+          stroke: '#000000',
+          // 默认边框颜色
+          strokeWidth: 1,
+          // 默认边框宽度
+          rowIndex: rowIndex,
+          colIndex: colIndex,
+          rowSpan: rowSpan,
+          colSpan: colSpan,
+          hasControls: false,
+          lockMovementY: true,
+          lockMovementX: true,
+          lockScalingX: true,
+          lockScalingY: true,
+          lockRotation: true,
+          lockSkewingX: true,
+          lockSkewingY: true,
+          id: "cell"
+        });
+
+        // 添加到单元格数组
+        return cellRect;
+      });
+      currentY += Math.max(row.height, OlpTable.DEFAULT_MIN_CELL_HEIGHT);
+      return rows;
+    });
+    console.log('Initialized Cells:', this.cells);
+  }
+
+  /**
+   * 获取单元格左边位置
+   */
+  _getCellLeft(colIndex) {
+    return this.columns.slice(0, colIndex).reduce((sum, col) => sum + Math.max(col.width, OlpTable.DEFAULT_MIN_CELL_WIDTH), 0);
+  }
+
+  /**
+   * 获取单元格顶部位置
+   */
+  _getCellTop(rowIndex) {
+    return this.rows.slice(0, rowIndex).reduce((sum, row) => sum + Math.max(row.height, OlpTable.DEFAULT_MIN_CELL_HEIGHT), 0);
+  }
+
+  /**
+   * 获取单元格宽度
+   */
+  _getCellWidth(colIndex, cell) {
+    var _cell$properties6;
+    const colSpan = ((_cell$properties6 = cell.properties) === null || _cell$properties6 === void 0 ? void 0 : _cell$properties6.colSpan) || 1;
+    let width = 0;
+    for (let i = 0; i < colSpan; i++) {
+      var _this$columns;
+      width += Math.max(((_this$columns = this.columns[colIndex + i]) === null || _this$columns === void 0 ? void 0 : _this$columns.width) || 0, OlpTable.DEFAULT_MIN_CELL_WIDTH);
+    }
+    return width;
+  }
+
+  /**
+   * 获取单元格高度
+   */
+  _getCellHeight(rowIndex, cell) {
+    var _cell$properties7;
+    const rowSpan = ((_cell$properties7 = cell.properties) === null || _cell$properties7 === void 0 ? void 0 : _cell$properties7.rowSpan) || 1;
+    let height = 0;
+    for (let i = 0; i < rowSpan; i++) {
+      var _this$rows;
+      height += Math.max(((_this$rows = this.rows[rowIndex + i]) === null || _this$rows === void 0 ? void 0 : _this$rows.height) || 0, OlpTable.DEFAULT_MIN_CELL_HEIGHT);
+    }
+    return height;
+  }
+  _renderCells(ctx) {
+    // 保存当前绘图状态
+    ctx.save();
+
+    // 2. 绘制所有单元格背景
+    let currentY = 0; // 从顶部开始绘制
+    this.rows.forEach((row, rowIndex) => {
+      let currentX = 0; // 从左侧开始绘制
+      let cellIndex = 0;
+      row.cells.forEach((cell, colIndex) => {
+        var _cell$properties8, _cell$properties9, _cell$properties10;
+        // 跳过被合并的单元格
+        if (cellIndex < colIndex) {
+          currentX += this.columns[cellIndex].width;
+          cellIndex++;
+        }
+
+        // 计算单元格实际宽高（考虑合并和最小值）
+        const colSpan = ((_cell$properties8 = cell.properties) === null || _cell$properties8 === void 0 ? void 0 : _cell$properties8.colSpan) || 1;
+        const rowSpan = ((_cell$properties9 = cell.properties) === null || _cell$properties9 === void 0 ? void 0 : _cell$properties9.rowSpan) || 1;
+        let cellWidth = 0;
+        for (let i = 0; i < colSpan; i++) {
+          cellWidth += Math.max(this.columns[cellIndex + i].width, OlpTable.DEFAULT_MIN_CELL_WIDTH);
+        }
+        let cellHeight = 0;
+        for (let i = 0; i < rowSpan; i++) {
+          cellHeight += Math.max(this.rows[rowIndex + i].height, OlpTable.DEFAULT_MIN_CELL_HEIGHT);
+        }
+
+        // 绘制单元格背景
+        ctx.fillStyle = ((_cell$properties10 = cell.properties) === null || _cell$properties10 === void 0 ? void 0 : _cell$properties10.fillColor) || '#f0f0f0'; // 默认填充色
+        ctx.fillRect(currentX, currentY, cellWidth, cellHeight);
+
+        // 移动到下一列
+        currentX += Math.max(this.columns[cellIndex].width, OlpTable.DEFAULT_MIN_CELL_WIDTH);
+        cellIndex++;
+      });
+      currentY += Math.max(row.height, OlpTable.DEFAULT_MIN_CELL_HEIGHT);
+    });
+
+    // 3. 绘制所有边框（代码与之前相同，省略...）
+    // 2. 绘制所有边框
+    currentY = 0; // 从顶部开始绘制
+    ctx.strokeStyle = '#000000'; // 默认边框颜色
+    ctx.lineWidth = 1; // 默认边框宽度
+
+    this.rows.forEach((row, _rowIndex) => {
+      let currentX = 0; // 从左侧开始绘制
+      let cellIndex = 0;
+      row.cells.forEach((cell, colIndex) => {
+        var _cell$properties11, _cell$properties12, _cell$properties13;
+        // 跳过被合并的单元格
+        if (cellIndex < colIndex) {
+          currentX += this.columns[cellIndex].width;
+          cellIndex++;
+        }
+        const cellWidth = this.columns[cellIndex].width * (((_cell$properties11 = cell.properties) === null || _cell$properties11 === void 0 ? void 0 : _cell$properties11.colSpan) || 1);
+        const cellHeight = row.height * (((_cell$properties12 = cell.properties) === null || _cell$properties12 === void 0 ? void 0 : _cell$properties12.rowSpan) || 1);
+
+        // 绘制单元格边框
+        if ((_cell$properties13 = cell.properties) !== null && _cell$properties13 !== void 0 && _cell$properties13.borders) {
+          const {
+            borders
+          } = cell.properties;
+
+          // 左边框
+          if (borders.left) {
+            ctx.strokeStyle = borders.left.color || '#000000';
+            ctx.lineWidth = borders.left.width || 1;
+            ctx.beginPath();
+            ctx.moveTo(currentX, currentY);
+            ctx.lineTo(currentX, currentY + cellHeight);
+            ctx.stroke();
+          }
+
+          // 右边框
+          if (borders.right) {
+            ctx.strokeStyle = borders.right.color || '#000000';
+            ctx.lineWidth = borders.right.width || 1;
+            ctx.beginPath();
+            ctx.moveTo(currentX + cellWidth, currentY);
+            ctx.lineTo(currentX + cellWidth, currentY + cellHeight);
+            ctx.stroke();
+          }
+
+          // 上边框
+          if (borders.top) {
+            ctx.strokeStyle = borders.top.color || '#000000';
+            ctx.lineWidth = borders.top.width || 1;
+            ctx.beginPath();
+            ctx.moveTo(currentX, currentY);
+            ctx.lineTo(currentX + cellWidth, currentY);
+            ctx.stroke();
+          }
+
+          // 下边框
+          if (borders.bottom) {
+            ctx.strokeStyle = borders.bottom.color || '#000000';
+            ctx.lineWidth = borders.bottom.width || 1;
+            ctx.beginPath();
+            ctx.moveTo(currentX, currentY + cellHeight);
+            ctx.lineTo(currentX + cellWidth, currentY + cellHeight);
+            ctx.stroke();
+          }
+        } else {
+          // 默认绘制所有边框
+          ctx.strokeStyle = '#000000';
+          ctx.lineWidth = 1;
+          ctx.strokeRect(currentX, currentY, cellWidth, cellHeight);
+        }
+
+        // 移动到下一列
+        currentX += this.columns[cellIndex].width;
+        cellIndex++;
+      });
+      currentY += row.height;
+    });
+    // 恢复绘图状态
+    ctx.restore();
+  }
+
+  /**
+   * 计算表格总尺寸并设置到实例属性
+   */
+  _calculateTableSize() {
+    // 计算总宽度（考虑最小宽度）
+    const width = this.columns.reduce((sum, col) => {
+      return sum + Math.max(col.width, OlpTable.DEFAULT_MIN_CELL_WIDTH);
+    }, 0);
+
+    // 计算总高度（考虑最小高度）
+    const height = this.rows.reduce((sum, row) => {
+      return sum + Math.max(row.height, OlpTable.DEFAULT_MIN_CELL_HEIGHT);
+    }, 0);
+    this._set('width', width);
+    this._set('height', height);
+  }
+}
+// 存储所有单元格的Textbox对象
+_defineProperty(OlpTable, "type", 'OlpTable');
+_defineProperty(OlpTable, "ownDefaults", olpTableDefaultValues);
+// 在类定义中添加静态常量
+_defineProperty(OlpTable, "DEFAULT_MIN_CELL_WIDTH", 30);
+// 默认最小单元格宽度
+_defineProperty(OlpTable, "DEFAULT_MIN_CELL_HEIGHT", 20);
+classRegistry.setClass(OlpTable);
+classRegistry.setSVGClass(OlpTable);
+
+const olpTableCellDefaultValues = {
+  content: {
+    paragraphs: [{
+      textRuns: [{
+        text: '标题1'
+      }]
+    }]
+  },
+  properties: {
+    fillColor: 'blue',
+    bold: true
+  },
+  padding: 0
+};
+
+// 文本相关类型
+
+class OlpTableCell extends Group {
+  static getDefaults() {
+    return _objectSpread2(_objectSpread2({}, super.getDefaults()), OlpTableCell.ownDefaults);
+  }
+
+  /**
+   * Constructor
+   * @param {Object} [options] Options object
+   */
+  constructor(options) {
+    super([new Textbox('单元格', {
+      width: options === null || options === void 0 ? void 0 : options.width,
+      height: options === null || options === void 0 ? void 0 : options.height,
+      fill: '#fff',
+      left: 0,
+      top: 0
+    })], {
+      hasControls: false,
+      subTargetCheck: true,
+      interactive: true,
+      layoutManager: new LayoutManager(new FixedLayout())
+    });
+    Object.assign(this, OlpTableCell.ownDefaults);
+    this.setOptions(options);
+  }
+  _renderBackground(ctx) {
+    var _this$properties, _this$properties2;
+    if (!this.backgroundColor && !((_this$properties = this.properties) !== null && _this$properties !== void 0 && _this$properties.fillColor)) {
+      return;
+    }
+    const dim = this._getNonTransformedDimensions();
+    ctx.fillStyle = ((_this$properties2 = this.properties) === null || _this$properties2 === void 0 ? void 0 : _this$properties2.fillColor) || this.backgroundColor;
+    ctx.fillRect(-dim.x / 2, -dim.y / 2, dim.x, dim.y);
+    // if there is background color no other shadows
+    // should be casted
+    this._removeShadow(ctx);
+  }
+
+  /**
+   * @private
+   * @param {CanvasRenderingContext2D} ctx Context to render on
+   */
+  _render(ctx) {}
+}
+_defineProperty(OlpTableCell, "ownDefaults", olpTableCellDefaultValues);
+classRegistry.setClass(OlpTableCell);
+classRegistry.setSVGClass(OlpTableCell);
+
 /**
  * Add a <g> element that envelop all child elements and makes the viewbox transformMatrix descend on all elements
  */
@@ -29099,5 +29593,5 @@ class Canvas extends Canvas$1 {
   }
 }
 
-export { ActiveSelection, BaseBrush, FabricObject$1 as BaseFabricObject, Canvas, Canvas2dFilterBackend, CanvasDOMManager, Circle, CircleBrush, ClipPathLayout, Color, Control, Ellipse, FabricImage, FabricObject, FabricText, FitContentLayout, FixedLayout, Gradient, Group, IText, FabricImage as Image, InteractiveFabricObject, Intersection, LayoutManager, LayoutStrategy, Line, FabricObject as Object, Observable, OlpShape, Path, Pattern, PatternBrush, PencilBrush, Point, Polygon, Polyline, Rect, Shadow, SprayBrush, StaticCanvas, StaticCanvasDOMManager, FabricText as Text, Textbox, Triangle, WebGLFilterBackend, cache, classRegistry, config, index as controlsUtils, createCollectionMixin, filters, getCSSRules, getEnv$1 as getEnv, getFabricDocument, getFabricWindow, getFilterBackend, iMatrix, initFilterBackend, isPutImageFaster, isWebGLPipelineState, loadSVGFromString, loadSVGFromURL, parseAttributes, parseFontDeclaration, parsePointsAttribute, parseSVGDocument, parseStyleAttribute, parseTransformAttribute, runningAnimations, setEnv, setFilterBackend, index$1 as util, VERSION as version };
+export { ActiveSelection, BaseBrush, FabricObject$1 as BaseFabricObject, Canvas, Canvas2dFilterBackend, CanvasDOMManager, Circle, CircleBrush, ClipPathLayout, Color, Control, Ellipse, FabricImage, FabricObject, FabricText, FitContentLayout, FixedLayout, Gradient, Group, IText, FabricImage as Image, InteractiveFabricObject, Intersection, LayoutManager, LayoutStrategy, Line, FabricObject as Object, Observable, OlpShape, OlpTable, OlpTableCell, Path, Pattern, PatternBrush, PencilBrush, Point, Polygon, Polyline, Rect, Shadow, SprayBrush, StaticCanvas, StaticCanvasDOMManager, FabricText as Text, Textbox, Triangle, WebGLFilterBackend, cache, classRegistry, config, index as controlsUtils, createCollectionMixin, filters, getCSSRules, getEnv$1 as getEnv, getFabricDocument, getFabricWindow, getFilterBackend, iMatrix, initFilterBackend, isPutImageFaster, isWebGLPipelineState, loadSVGFromString, loadSVGFromURL, parseAttributes, parseFontDeclaration, parsePointsAttribute, parseSVGDocument, parseStyleAttribute, parseTransformAttribute, runningAnimations, setEnv, setFilterBackend, index$1 as util, VERSION as version };
 //# sourceMappingURL=index.node.mjs.map

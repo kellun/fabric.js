@@ -3,6 +3,7 @@ import type { TClassProperties, TOptions } from '../../typedefs';
 import { Textbox } from '../Textbox';
 import { Group, type GroupProps } from '../Group';
 import { Rect } from '../Rect';
+import { UniqueOlpTableCellProps } from './OlpTableCell';
 
 export const olpTableDefaultValues: Partial<TClassProperties<OlpTable>> = {
   properties: {
@@ -115,50 +116,7 @@ interface TableColumnDefinition {
 
 interface TableRow {
   height: number; // 行高（单位：px）
-  cells: TableCell[]; // 单元格数据
-}
-
-interface TableCell {
-  content?: {
-    textProperties?: TextFormatting;
-    paragraphs: Paragraph[]; // 文本段落
-  };
-  properties?: TableCellFormatting;
-}
-
-interface TableCellFormatting {
-  rowSpan?: number; // 跨行数
-  colSpan?: number; // 跨列数
-  fillColor?: string; // 填充色（如 "#FF0000"）
-  borders?: {
-    left?: BorderStyle;
-    right?: BorderStyle;
-    top?: BorderStyle;
-    bottom?: BorderStyle;
-  };
-  bold?: boolean; // 是否加粗
-}
-
-// 文本相关类型
-interface TextFormatting {
-  wrapText?: boolean;
-  rightToLeft?: boolean;
-  // 其他文本属性...
-}
-
-interface Paragraph {
-  textRuns: TextRun[]; // 文本片段
-  // 段落格式...
-}
-
-interface TextRun {
-  text: string; // 实际文本内容
-  // 字体样式...
-}
-
-interface BorderStyle {
-  width?: number; // 边框宽度
-  color?: string; // 边框颜色（如 "#000000"）
+  cells: UniqueOlpTableCellProps[]; // 单元格数据
 }
 
 export interface OlpTableProps extends GroupProps, UniqueOlpTableProps {}
@@ -372,7 +330,10 @@ export class OlpTable<
   /**
    * 获取单元格宽度
    */
-  private _getCellWidth(colIndex: number, cell: TableCell): number {
+  private _getCellWidth(
+    colIndex: number,
+    cell: UniqueOlpTableCellProps,
+  ): number {
     const colSpan = cell.properties?.colSpan || 1;
     let width = 0;
 
@@ -389,7 +350,10 @@ export class OlpTable<
   /**
    * 获取单元格高度
    */
-  private _getCellHeight(rowIndex: number, cell: TableCell): number {
+  private _getCellHeight(
+    rowIndex: number,
+    cell: UniqueOlpTableCellProps,
+  ): number {
     const rowSpan = cell.properties?.rowSpan || 1;
     let height = 0;
 

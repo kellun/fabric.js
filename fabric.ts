@@ -170,6 +170,7 @@ export type {
 } from './src/shapes/Image';
 export { OlpShape } from './src/shapes/Elements/OlpShape';
 export { OlpTable } from './src/shapes/Elements/OlpTable';
+export { OlpTableCell } from './src/shapes/Elements/OlpTableCell';
 export { createCollectionMixin } from './src/Collection';
 
 export * as util from './src/util';
